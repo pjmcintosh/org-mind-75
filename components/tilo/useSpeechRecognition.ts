@@ -39,22 +39,7 @@ declare global {
   }
 }
 
-export interface UseSpeechRecognitionProps {
-  onResult: (transcript: string) => void
-  onError?: (error: string) => void
-  lang?: string
-}
-
-export interface UseSpeechRecognitionReturn {
-  isListening: boolean
-  isSupported: boolean
-  startListening: () => void
-  stopListening: () => void
-  error: string | null
-  isProcessing: boolean
-}
-
-export const useSpeechRecognition = () => {
+export function useSpeechRecognition() {
   const [isListening, setIsListening] = useState(false)
   const [transcript, setTranscript] = useState("")
   const [error, setError] = useState<string | null>(null)
