@@ -2,6 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 
+// Define types for the Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList
+  resultIndex: number
+}
+
 declare global {
   interface Window {
     webkitSpeechRecognition: any
