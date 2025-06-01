@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Send, User, Brain, Sparkles } from "lucide-react"
@@ -53,14 +53,76 @@ export default function DesktopTiloPage() {
     }
   }, [isListening, isProcessing])
 
-  function handleVoiceInput(transcript: string) {
+  // Handle voice input - using useCallback to prevent recreation on each render
+  const handleVoiceInput = useCallback((transcript: string) => {
     console.log("Voice transcript received:", transcript)
     if (transcript.trim()) {
-      handleUserMessage(transcript)
+      // Create user message object
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        type: "user",
+        content: transcript,
+        timestamp: new Date(),
+      }
+
+      // Add message to state
+      setMessages((prev) => [...prev, userMessage])
+      setShowTips(false)
+
+      // Process the message
+      processUserMessage(transcript)
     }
-  }
+  }, [])
+
+  // Process user message - using useCallback to prevent recreation on each render
+  const processUserMessage = useCallback(
+    async (content: string) => {
+      setIsProcessing(true)
+
+      // Simulate processing delay
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      let response = ""
+
+      // Generate contextual responses based on user input
+      const lowerContent = content.toLowerCase()
+
+      if (lowerContent.includes("status") || lowerContent.includes("update") || lowerContent.includes("briefing")) {
+        const statusData = getCEOStatusUpdate()
+        response = `${getTimeBasedGreeting()} Here's your current status update:\n\n${statusData.summary}\n\nYour immediate action items:\n${statusData.actionItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}`
+      } else if (lowerContent.includes("hello") || lowerContent.includes("hi") || lowerContent.includes("hey")) {
+        response = `${getTimeBasedGreeting()} I'm Tilo, your organizational mind. I'm here to help you with insights, decisions, and operational updates. What would you like to know?`
+      } else if (lowerContent.includes("agent") || lowerContent.includes("team")) {
+        response = `Currently monitoring 7 active agents across your organization:\n\n• Ada (Legal) - 98% efficiency\n• Bob (Client Relations) - 92% efficiency\n• Ephrya (Strategic Analysis) - 96% efficiency\n• Eve (Operations) - 94% efficiency\n• Janet (Finance) - 97% efficiency\n• Lexi (Compliance) - 95% efficiency\n• Max (Technical) - 91% efficiency\n\nAll agents are performing within optimal parameters. Would you like detailed insights on any specific agent?`
+      } else if (lowerContent.includes("project") || lowerContent.includes("initiative")) {
+        response = `I'm tracking 12 active projects across your organization:\n\n🟢 8 projects on schedule\n🟡 3 projects requiring attention\n🔴 1 project at risk\n\nThe Digital Transformation Initiative (PRJ-001) is currently under review and may need your executive decision. Would you like me to provide detailed analysis?`
+      } else if (lowerContent.includes("help") || lowerContent.includes("what can you do")) {
+        response = `As your organizational mind, I can help you with:\n\n• Real-time status updates and briefings\n• Agent performance monitoring and insights\n• Project tracking and risk assessment\n• Strategic decision support\n• Operational efficiency analysis\n• Compliance and regulatory guidance\n• Financial performance summaries\n\nWhat specific area would you like to explore?`
+      } else {
+        response = `I understand you're asking about "${content}". As your organizational mind, I'm analyzing this request in the context of your ${currentRole} role. Let me provide you with relevant insights and recommendations based on current organizational data.`
+      }
+
+      const tiloMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: "tilo",
+        content: response,
+        timestamp: new Date(),
+      }
+
+      setMessages((prev) => [...prev, tiloMessage])
+      setIsProcessing(false)
+
+      // Speak the response if it's not too long
+      if (response.length < 200) {
+        speakText(response)
+      }
+    },
+    [currentRole],
+  )
 
   function handleUserMessage(content: string) {
+    if (!content.trim() || isProcessing) return
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
@@ -76,50 +138,8 @@ export default function DesktopTiloPage() {
     processUserMessage(content)
   }
 
-  async function processUserMessage(content: string) {
-    setIsProcessing(true)
-
-    // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    let response = ""
-
-    // Generate contextual responses based on user input
-    const lowerContent = content.toLowerCase()
-
-    if (lowerContent.includes("status") || lowerContent.includes("update") || lowerContent.includes("briefing")) {
-      const statusData = getCEOStatusUpdate()
-      response = `${getTimeBasedGreeting()} Here's your current status update:\n\n${statusData.summary}\n\nYour immediate action items:\n${statusData.actionItems.map((item, i) => `${i + 1}. ${item}`).join("\n")}`
-    } else if (lowerContent.includes("hello") || lowerContent.includes("hi") || lowerContent.includes("hey")) {
-      response = `${getTimeBasedGreeting()} I'm Tilo, your organizational mind. I'm here to help you with insights, decisions, and operational updates. What would you like to know?`
-    } else if (lowerContent.includes("agent") || lowerContent.includes("team")) {
-      response = `Currently monitoring 7 active agents across your organization:\n\n• Ada (Legal) - 98% efficiency\n• Bob (Client Relations) - 92% efficiency\n• Ephrya (Strategic Analysis) - 96% efficiency\n• Eve (Operations) - 94% efficiency\n• Janet (Finance) - 97% efficiency\n• Lexi (Compliance) - 95% efficiency\n• Max (Technical) - 91% efficiency\n\nAll agents are performing within optimal parameters. Would you like detailed insights on any specific agent?`
-    } else if (lowerContent.includes("project") || lowerContent.includes("initiative")) {
-      response = `I'm tracking 12 active projects across your organization:\n\n🟢 8 projects on schedule\n🟡 3 projects requiring attention\n🔴 1 project at risk\n\nThe Digital Transformation Initiative (PRJ-001) is currently under review and may need your executive decision. Would you like me to provide detailed analysis?`
-    } else if (lowerContent.includes("help") || lowerContent.includes("what can you do")) {
-      response = `As your organizational mind, I can help you with:\n\n• Real-time status updates and briefings\n• Agent performance monitoring and insights\n• Project tracking and risk assessment\n• Strategic decision support\n• Operational efficiency analysis\n• Compliance and regulatory guidance\n• Financial performance summaries\n\nWhat specific area would you like to explore?`
-    } else {
-      response = `I understand you're asking about "${content}". As your organizational mind, I'm analyzing this request in the context of your ${currentRole} role. Let me provide you with relevant insights and recommendations based on current organizational data.`
-    }
-
-    const tiloMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      type: "tilo",
-      content: response,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, tiloMessage])
-    setIsProcessing(false)
-
-    // Speak the response if it's not too long
-    if (response.length < 200) {
-      speakText(response)
-    }
-  }
-
   function handleSendMessage() {
-    if (inputValue.trim()) {
+    if (inputValue.trim() && !isProcessing) {
       handleUserMessage(inputValue)
     }
   }
@@ -138,6 +158,11 @@ export default function DesktopTiloPage() {
   function handleSpeechError(error: string) {
     console.error("Speech recognition error:", error)
     setSpeechError(error)
+
+    // Auto-clear non-critical errors after 5 seconds
+    setTimeout(() => {
+      setSpeechError(null)
+    }, 5000)
   }
 
   return (
