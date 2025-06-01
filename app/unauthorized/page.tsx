@@ -11,11 +11,19 @@ export default function UnauthorizedPage() {
   const [userRole, setUserRole] = useState<string>("unknown")
 
   useEffect(() => {
-    // Get the user role from cookie for debugging purposes
-    const cookies = document.cookie.split(";")
-    const roleCookie = cookies.find((cookie) => cookie.trim().startsWith("ephrya-user-role="))
-    if (roleCookie) {
-      setUserRole(roleCookie.split("=")[1])
+    // Get the user role from multiple possible storage locations
+    if (typeof window !== "undefined") {
+      const role =
+        localStorage.getItem("tilo-current-role") ||
+        localStorage.getItem("ephrya-user-role") ||
+        document.cookie
+          .split(";")
+          .find((cookie) => cookie.trim().startsWith("ephrya-user-role="))
+          ?.split("=")[1] ||
+        "unknown"
+
+      setUserRole(role)
+      console.log(`Unauthorized page: Detected role as ${role}`)
     }
   }, [])
 
@@ -23,11 +31,16 @@ export default function UnauthorizedPage() {
     if (window.history.length > 1) {
       router.back()
     } else {
-      // Fallback to client dashboard or home based on role
-      if (userRole === "client" || userRole === "new client") {
+      // Fallback to appropriate dashboard based on role
+      const normalizedRole = userRole.toLowerCase()
+      if (normalizedRole === "client" || normalizedRole === "new client") {
         router.push("/client/dashboard")
+      } else if (normalizedRole === "mobile ceo" || normalizedRole === "ceo") {
+        router.push("/admin/ceo")
+      } else if (normalizedRole === "admin") {
+        router.push("/admin/dashboard")
       } else {
-        router.push("/")
+        router.push("/select-role")
       }
     }
   }

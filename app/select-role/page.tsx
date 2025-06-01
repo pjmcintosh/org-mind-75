@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useRole, AVAILABLE_ROLES, getRoleInfo } from "@/lib/context/role-context"
-import { getCurrentUserRole, hasCompletedOnboarding } from "@/lib/auth"
+import { getCurrentUserRole, hasCompletedOnboarding, switchToRole } from "@/lib/auth"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import ClientTile from "@/components/select-role/ClientTile"
@@ -32,6 +32,9 @@ function useRoleBasedRedirect() {
           break
         case "ceo":
           destination = "/admin/ceo"
+          break
+        case "mobile ceo":
+          destination = "/admin/ceo" // Mobile CEO goes to same dashboard as CEO
           break
         case "client":
           destination = "/client/dashboard"
@@ -63,12 +66,8 @@ function RoleSwitcher() {
     const normalizedRole = newRole.toLowerCase()
     setRole(normalizedRole as any)
 
-    // Also set in the test role storage for consistency
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tilo-test-role", normalizedRole)
-      localStorage.setItem("tilo-current-role", normalizedRole)
-    }
-
+    // Use the auth utility to properly set the role
+    switchToRole(normalizedRole as any)
     console.log(`Role set to ${normalizedRole}`)
   }
 
@@ -123,7 +122,9 @@ export default function SelectRolePage() {
   const showNewClientTile = normalizedRole === "new client"
   const showClientTile = normalizedRole === "client"
   const showAdminClientSelector = normalizedRole === "admin"
-  const showAdminTile = normalizedRole !== "client" && normalizedRole !== "new client"
+  const showAdminTile =
+    normalizedRole !== "client" && normalizedRole !== "new client" && normalizedRole !== "mobile ceo"
+  const showMobileCEOTile = normalizedRole === "mobile ceo"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b1323] to-[#101d34] flex items-center justify-center p-4">
@@ -175,50 +176,58 @@ export default function SelectRolePage() {
             <AdminTile className="bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm text-white p-6 rounded-xl" />
           )}
 
-          {/* Demo Mobile CEO Tile - Show for development/testing */}
-          <div className="md:col-span-2 max-w-lg mx-auto">
-            <Card
-              className="bg-gradient-to-br from-purple-900/80 to-indigo-900/80 border border-purple-500/20 backdrop-blur-sm text-white p-6 rounded-xl cursor-pointer hover:from-purple-800/80 hover:to-indigo-800/80 transition-all duration-200"
-              onClick={() => {
-                // Set demo flags
-                if (typeof window !== "undefined") {
-                  localStorage.setItem("tilo-current-role", "CEO")
-                  localStorage.setItem("tilo-mobile-demo", "true")
-                }
-                // Redirect to ask-tilo
-                router.push("/admin/ask-tilo")
-              }}
-            >
-              <CardContent className="p-0">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
-                      <Smartphone className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-purple-200">Demo Mobile CEO</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-purple-300">Mobile Experience</span>
-                        <span className="px-2 py-1 bg-purple-600/50 rounded-full text-xs text-purple-200">Demo</span>
+          {/* Demo Mobile CEO Tile - Show ONLY for Mobile CEO role */}
+          {showMobileCEOTile && (
+            <div className="md:col-span-2 max-w-lg mx-auto">
+              <Card
+                className="bg-gradient-to-br from-purple-900/80 to-indigo-900/80 border border-purple-500/20 backdrop-blur-sm text-white p-6 rounded-xl cursor-pointer hover:from-purple-800/80 hover:to-indigo-800/80 transition-all duration-200"
+                onClick={() => {
+                  // Set demo flags and redirect to mobile Tilo
+                  if (typeof window !== "undefined") {
+                    // Ensure we're recognized as CEO for permissions but keep mobile CEO for UI
+                    localStorage.setItem("tilo-current-role", "mobile ceo")
+                    localStorage.setItem("tilo-test-role", "mobile ceo")
+                    localStorage.setItem("ephrya-user-role", "mobile ceo")
+                    localStorage.setItem("tilo-mobile-demo", "true")
+
+                    // Also set CEO cookie for middleware
+                    document.cookie = "ephrya-user-role=mobile ceo; path=/; max-age=86400"
+                  }
+                  // Redirect to ask-tilo desktop (which will handle mobile mode)
+                  router.push("/admin/ask-tilo/desktop")
+                }}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+                        <Smartphone className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-purple-200">Demo Mobile CEO</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-purple-300">Mobile Experience</span>
+                          <span className="px-2 py-1 bg-purple-600/50 rounded-full text-xs text-purple-200">Demo</span>
+                        </div>
                       </div>
                     </div>
+                    <ArrowRight className="w-5 h-5 text-purple-400" />
                   </div>
-                  <ArrowRight className="w-5 h-5 text-purple-400" />
-                </div>
-                <p className="text-purple-300 text-sm mb-4">
-                  Simulates mobile app access with CEO briefing mode. Experience voice-first interaction and executive
-                  status updates.
-                </p>
-                <div className="flex items-center gap-2 text-xs text-purple-400">
-                  <Volume2 className="w-3 h-3" />
-                  <span>Voice-only interface</span>
-                  <span>•</span>
-                  <MessageCircle className="w-3 h-3" />
-                  <span>Executive briefings</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                  <p className="text-purple-300 text-sm mb-4">
+                    Simulates mobile app access with CEO briefing mode. Experience voice-first interaction and executive
+                    status updates.
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-purple-400">
+                    <Volume2 className="w-3 h-3" />
+                    <span>Voice-only interface</span>
+                    <span>•</span>
+                    <MessageCircle className="w-3 h-3" />
+                    <span>Executive briefings</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

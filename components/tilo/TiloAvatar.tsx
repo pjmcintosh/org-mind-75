@@ -9,13 +9,20 @@ interface TiloAvatarProps {
   state?: TiloState
   size?: TiloSize
   className?: string
+  fallbackToStatic?: boolean
 }
 
-export default function TiloAvatar({ state = "idle", size = "md", className = "" }: TiloAvatarProps) {
+export default function TiloAvatar({
+  state = "idle",
+  size = "md",
+  className = "",
+  fallbackToStatic = true,
+}: TiloAvatarProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [currentVideo, setCurrentVideo] = useState<string>("")
   const [fallbackActive, setFallbackActive] = useState(false)
+  const [useStaticFallback, setUseStaticFallback] = useState(false)
 
   // Size mapping
   const sizeClasses = {
@@ -23,6 +30,16 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
     md: "w-16 h-16",
     lg: "w-24 h-24",
     xl: "w-32 h-32",
+  }
+
+  // Check if video file exists
+  const checkVideoExists = async (src: string): Promise<boolean> => {
+    try {
+      const response = await fetch(src, { method: "HEAD" })
+      return response.ok
+    } catch {
+      return false
+    }
   }
 
   // Load and play the appropriate video based on state
@@ -35,52 +52,77 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
       setVideoLoaded(false)
       setFallbackActive(false)
 
-      if (videoRef.current) {
-        const video = videoRef.current
+      // Check if we should use static fallback immediately
+      if (useStaticFallback) {
+        return
+      }
 
-        // Clear previous event handlers
-        video.onloadeddata = null
-        video.onerror = null
-        video.oncanplay = null
-
-        // Set up new event handlers
-        video.onloadeddata = () => {
-          console.log(`Tilo video loaded: ${videoSrc}`)
-          setVideoLoaded(true)
-          setFallbackActive(false)
-          video.play().catch((err) => {
-            console.error("Error playing Tilo animation:", err)
+      // First check if the video file exists
+      checkVideoExists(videoSrc).then((exists) => {
+        if (!exists) {
+          console.warn(`Tilo video file not found: ${videoSrc}`)
+          if (fallbackToStatic) {
+            setUseStaticFallback(true)
+          } else {
             setFallbackActive(true)
-          })
+          }
+          return
         }
 
-        video.oncanplay = () => {
-          console.log(`Tilo video can play: ${videoSrc}`)
-          if (!videoLoaded) {
+        if (videoRef.current) {
+          const video = videoRef.current
+
+          // Clear previous event handlers
+          video.onloadeddata = null
+          video.onerror = null
+          video.oncanplay = null
+
+          // Set up new event handlers
+          video.onloadeddata = () => {
+            console.log(`Tilo video loaded: ${videoSrc}`)
             setVideoLoaded(true)
             setFallbackActive(false)
+            video.play().catch((err) => {
+              console.error("Error playing Tilo animation:", err)
+              if (fallbackToStatic) {
+                setUseStaticFallback(true)
+              } else {
+                setFallbackActive(true)
+              }
+            })
           }
-        }
 
-        // Handle errors with better logging
-        video.onerror = (e) => {
-          console.error("Error loading Tilo animation:", {
-            src: videoSrc,
-            error: e,
-            videoError: video.error,
-            networkState: video.networkState,
-            readyState: video.readyState,
-          })
-          setVideoLoaded(false)
-          setFallbackActive(true)
-        }
+          video.oncanplay = () => {
+            if (!videoLoaded) {
+              setVideoLoaded(true)
+              setFallbackActive(false)
+            }
+          }
 
-        // Set source and load
-        video.src = videoSrc
-        video.load()
-      }
+          // Handle errors with better logging and fallback
+          video.onerror = (e) => {
+            console.error("Error loading Tilo animation:", {
+              src: videoSrc,
+              error: e,
+              videoError: video.error,
+              networkState: video.networkState,
+              readyState: video.readyState,
+            })
+            setVideoLoaded(false)
+            if (fallbackToStatic) {
+              setUseStaticFallback(true)
+            } else {
+              setFallbackActive(true)
+            }
+          }
+
+          // Set source and load
+          video.src = videoSrc
+          video.load()
+        }
+      })
     }
-  }, [state, currentVideo, videoLoaded])
+  }, [state, currentVideo, videoLoaded, useStaticFallback, fallbackToStatic])
 
   // Cleanup effect
   useEffect(() => {
@@ -94,6 +136,24 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
       }
     }
   }, [])
+
+  // If using static fallback, render the static image
+  if (useStaticFallback) {
+    return (
+      <div className={`relative rounded-full overflow-hidden bg-cyan-900/30 ${sizeClasses[size]} ${className}`}>
+        <img
+          src="/tilo-static-avatar.png"
+          alt="Tilo Avatar"
+          className="w-full h-full object-cover"
+          onError={() => {
+            console.warn("Static Tilo avatar also failed to load")
+            setUseStaticFallback(false)
+            setFallbackActive(true)
+          }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className={`relative rounded-full overflow-hidden bg-cyan-900/30 ${sizeClasses[size]} ${className}`}>
@@ -110,7 +170,7 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
         preload="metadata"
       />
 
-      {/* Fallback image or animation when video fails */}
+      {/* Fallback animation when video fails */}
       {(!videoLoaded || fallbackActive) && (
         <div className="absolute inset-0 flex items-center justify-center bg-cyan-900/30">
           <div className="w-3/4 h-3/4 rounded-full bg-cyan-400/80 animate-pulse flex items-center justify-center">

@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { User, Shield, Briefcase, Users } from "lucide-react"
+import { User, Shield, Briefcase, Users, Smartphone } from "lucide-react"
 import { useUser, switchUserRole } from "@/hooks/use-user"
 
 export function UserRoleSwitcher() {
@@ -14,6 +14,7 @@ export function UserRoleSwitcher() {
     { key: "finance", label: "Finance", icon: Briefcase, description: "Finance department access" },
     { key: "hr", label: "HR", icon: Users, description: "HR department access" },
     { key: "tech", label: "Tech", icon: User, description: "Technical team access" },
+    { key: "mobile ceo", label: "Mobile CEO", icon: Smartphone, description: "Mobile CEO experience" },
   ]
 
   return (

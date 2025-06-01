@@ -13,6 +13,7 @@ export const AVAILABLE_ROLES = [
   "hr",
   "finance",
   "legal",
+  "mobile ceo", // Added Mobile CEO role
 ] as const
 
 export type Role = (typeof AVAILABLE_ROLES)[number]
@@ -174,6 +175,12 @@ export function getRoleInfo(role: Role) {
       description: "Legal document management and compliance",
       color: "bg-indigo-100 text-indigo-800",
       icon: "⚖️",
+    },
+    "mobile ceo": {
+      label: "Mobile CEO",
+      description: "Mobile executive experience",
+      color: "bg-cyan-100 text-cyan-800",
+      icon: "📱",
     },
   }
 

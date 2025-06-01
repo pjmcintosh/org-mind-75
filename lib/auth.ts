@@ -25,6 +25,12 @@ const MOCK_USERS: Record<string, User> = {
     role: "ceo",
     impersonated: false,
   },
+  "mobile ceo": {
+    name: "Michael Chen",
+    email: "michael.chen@elevateai.com",
+    role: "mobile ceo",
+    impersonated: false,
+  },
   client: {
     name: "Sarah Johnson",
     email: "sarah.johnson@techcorp.com",
@@ -43,9 +49,18 @@ const MOCK_USERS: Record<string, User> = {
 export function getCurrentUser(): User {
   // Check for role override in localStorage (for testing)
   if (typeof window !== "undefined") {
-    const overrideRole = localStorage.getItem("tilo-test-role")
+    const overrideRole = localStorage.getItem("tilo-current-role") || localStorage.getItem("tilo-test-role")
     if (overrideRole) {
       const normalizedRole = overrideRole.toLowerCase() as UserRole
+
+      // Handle mobile CEO as a special case
+      if (normalizedRole === "mobile ceo") {
+        return {
+          ...MOCK_USERS["ceo"],
+          role: "mobile ceo",
+        }
+      }
+
       if (MOCK_USERS[normalizedRole]) {
         const user = { ...MOCK_USERS[normalizedRole] }
 
@@ -67,7 +82,7 @@ export function getCurrentUser(): User {
 // Mock function to get current user role
 export function getCurrentUserRole(): UserRole | null {
   if (typeof window !== "undefined") {
-    const storedRole = localStorage.getItem("tilo-current-role")
+    const storedRole = localStorage.getItem("tilo-current-role") || localStorage.getItem("tilo-test-role")
     if (storedRole) {
       const normalizedRole = storedRole.toLowerCase() as UserRole
       if (AVAILABLE_ROLES.includes(normalizedRole)) {
@@ -90,7 +105,8 @@ export function isClient(): boolean {
 }
 
 export function isCEO(): boolean {
-  return getCurrentUser().role.toLowerCase() === "ceo"
+  const role = getCurrentUser().role.toLowerCase()
+  return role === "ceo" || role === "mobile ceo"
 }
 
 export function isNewClient(): boolean {
@@ -110,6 +126,16 @@ export function switchToRole(role: UserRole): void {
   if (typeof window !== "undefined") {
     const normalizedRole = role.toLowerCase()
     localStorage.setItem("tilo-test-role", normalizedRole)
+    localStorage.setItem("tilo-current-role", normalizedRole)
+    localStorage.setItem("ephrya-user-role", normalizedRole)
+
+    // Set mobile demo flag for mobile CEO
+    if (normalizedRole === "mobile ceo") {
+      localStorage.setItem("tilo-mobile-demo", "true")
+    } else {
+      localStorage.removeItem("tilo-mobile-demo")
+    }
+
     console.log(`Auth: Switched to role ${normalizedRole}`)
   }
 }
@@ -119,6 +145,8 @@ export function startImpersonation(targetRole: UserRole): void {
   if (typeof window !== "undefined" && isAdmin()) {
     const normalizedRole = targetRole.toLowerCase()
     localStorage.setItem("tilo-test-role", normalizedRole)
+    localStorage.setItem("tilo-current-role", normalizedRole)
+    localStorage.setItem("ephrya-user-role", normalizedRole)
     localStorage.setItem("tilo-impersonating", "true")
     console.log(`Auth: Started impersonating ${normalizedRole}`)
   }
@@ -128,6 +156,8 @@ export function startImpersonation(targetRole: UserRole): void {
 export function stopImpersonation(): void {
   if (typeof window !== "undefined") {
     localStorage.setItem("tilo-test-role", "admin")
+    localStorage.setItem("tilo-current-role", "admin")
+    localStorage.setItem("ephrya-user-role", "admin")
     localStorage.removeItem("tilo-impersonating")
     console.log("Auth: Stopped impersonation")
   }
@@ -136,17 +166,18 @@ export function stopImpersonation(): void {
 // Get user permissions based on role
 export function getUserPermissions() {
   const role = getUserRole().toLowerCase()
+  const isMobileCEO = role === "mobile ceo"
 
   const permissions = {
-    canViewAdminPanel: role === "admin" || role === "ceo",
+    canViewAdminPanel: role === "admin" || role === "ceo" || isMobileCEO,
     canManageAgents: role === "admin",
-    canViewReports: role === "admin" || role === "ceo",
-    canApproveProjects: role === "ceo",
+    canViewReports: role === "admin" || role === "ceo" || isMobileCEO,
+    canApproveProjects: role === "ceo" || isMobileCEO,
     canSubmitProjects: role === "client" || role === "new client",
     canViewOwnProjects: true,
     canImpersonate: role === "admin",
     canAccessTilo: true,
-    canViewSystemStatus: role === "admin" || role === "ceo",
+    canViewSystemStatus: role === "admin" || role === "ceo" || isMobileCEO,
   }
 
   return permissions
@@ -173,4 +204,4 @@ export function setUserRole(role: UserRole): void {
   switchToRole(role)
 }
 
-console.log("Loaded: Auth utility with case-insensitive RBAC")
+console.log("Loaded: Auth utility with case-insensitive RBAC and mobile CEO support")
