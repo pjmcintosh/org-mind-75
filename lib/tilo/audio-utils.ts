@@ -6,7 +6,12 @@ import { speak as tiloSpeak } from "@/lib/voice/speech"
  * Speaks text using Tilo's UK female voice
  */
 export function speakText(text: string): void {
-  tiloSpeak(text)
+  console.log("Speaking text via audio-utils:", text)
+  tiloSpeak(text, {
+    onStart: () => console.log("Started speaking via audio-utils"),
+    onEnd: () => console.log("Finished speaking via audio-utils"),
+    onError: (err) => console.error("Speech error in audio-utils:", err),
+  })
 }
 
 /**

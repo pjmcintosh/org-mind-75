@@ -4,7 +4,8 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { detectIntent, getIntentResponse, logVoiceInteraction, type TiloIntent } from "@/lib/workflows/tilo-intents"
 import { useTiloState } from "./useTiloState"
-import { speak, stopSpeaking } from "@/lib/voice/speech"
+import { speak, stopSpeaking, initializeVoices, testSpeech } from "@/lib/voice/speech"
+import { Button } from "@/components/ui/button"
 
 // Web Speech API type declarations
 declare global {
@@ -22,21 +23,53 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
   const [text, setText] = useState("")
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [voiceReady, setVoiceReady] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const { tiloState, setTiloState } = useTiloState()
+
+  // Initialize voice on component mount
+  useEffect(() => {
+    const initVoice = async () => {
+      const success = await initializeVoices()
+      setVoiceReady(success)
+      console.log("Voice initialization:", success ? "SUCCESS" : "FAILED")
+    }
+
+    initVoice()
+
+    return () => {
+      // Stop any ongoing speech when component unmounts
+      stopSpeaking()
+    }
+  }, [])
 
   // Helper function to respond with both text and speech
   const respondWithSpeech = (response: string, delay = 2000) => {
     onTextChange(response)
     setIsSpeaking(true)
-    speak(response)
+    setTiloState("alert")
 
-    // Return to idle state after speaking
-    setTimeout(() => {
-      setTiloState("idle")
-      setIsSpeaking(false)
-    }, delay)
+    console.log("Speaking response:", response)
+
+    speak(response, {
+      onStart: () => {
+        console.log("Speech started")
+        setIsSpeaking(true)
+      },
+      onEnd: () => {
+        console.log("Speech ended")
+        setIsSpeaking(false)
+        setTiloState("idle")
+      },
+      onError: (error) => {
+        console.error("Speech error:", error)
+        setIsSpeaking(false)
+        setTiloState("idle")
+        // Fallback to timeout if speech fails
+        setTimeout(() => setTiloState("idle"), delay)
+      },
+    })
   }
 
   function handleVoiceIntent(intent: TiloIntent, transcript: string) {
@@ -249,6 +282,14 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
     }
   }, [])
 
+  // Function to test speech
+  const runSpeechTest = async () => {
+    setIsSpeaking(true)
+    const success = await testSpeech()
+    setTimeout(() => setIsSpeaking(false), 3000)
+    return success
+  }
+
   return (
     <div className="space-y-4">
       <textarea
@@ -260,34 +301,41 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
         cols={50}
         className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400"
       />
-      <div className="flex gap-2">
-        <button
+      <div className="flex flex-wrap gap-2">
+        <Button
           onClick={isListening ? stopListening : startListening}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            isListening ? "bg-red-500 hover:bg-red-600 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white"
-          }`}
+          variant={isListening ? "destructive" : "default"}
+          className="transition-colors"
         >
           {isListening ? "Stop Listening" : "Start Listening"}
-        </button>
+        </Button>
+
         {isSpeaking && (
-          <button
+          <Button
             onClick={() => {
               stopSpeaking()
               setIsSpeaking(false)
               setTiloState("idle")
             }}
-            className="px-4 py-2 rounded-lg font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+            variant="outline"
+            className="transition-colors"
           >
             Stop Speaking
-          </button>
+          </Button>
         )}
+
+        <Button onClick={runSpeechTest} variant="outline" className="ml-auto">
+          Test Voice
+        </Button>
       </div>
-      {(isListening || isSpeaking) && (
-        <div className="text-sm text-gray-600">
-          {isListening && "🎤 Listening..."}
-          {isSpeaking && "🔊 Tilo is speaking..."}
-        </div>
-      )}
+
+      <div className="text-sm text-gray-600 flex items-center gap-2">
+        {isListening && <span className="flex items-center">🎤 Listening...</span>}
+        {isSpeaking && <span className="flex items-center">🔊 Speaking...</span>}
+        <span className={`ml-auto ${voiceReady ? "text-green-600" : "text-amber-600"}`}>
+          Voice: {voiceReady ? "Ready" : "Initializing..."}
+        </span>
+      </div>
     </div>
   )
 }
