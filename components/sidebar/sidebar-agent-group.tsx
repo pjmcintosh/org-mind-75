@@ -74,9 +74,14 @@ function SidebarAgentItem({
         title={item.description}
       >
         {/* Agent Avatar or Entity Icon */}
-        <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative">
+        <div
+          className={cn(
+            "rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative",
+            isTilo ? "w-24 h-24 border-2 border-cyan-400 shadow-md" : "w-6 h-6",
+          )}
+        >
           {isTilo ? (
-            <TiloAvatar state="idle" size="md" />
+            <TiloAvatar state="idle" size="lg" />
           ) : avatarPath ? (
             <img
               src={avatarPath || "/placeholder.svg"}
