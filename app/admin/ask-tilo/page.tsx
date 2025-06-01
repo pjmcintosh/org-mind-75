@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Smartphone, Mic, MicOff } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { SpeechRecognition } from "web-speech-api"
+
 
 // Text-to-Speech utility
 function speakText(text: string) {

@@ -4,9 +4,11 @@ import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Mic, MicOff, AlertCircle } from "lucide-react"
 import { useSpeechRecognition } from "./useSpeechRecognition"
+import { detectIntent, type TiloIntent } from "@/lib/workflows/tilo-intents"
 
 interface MicButtonProps {
   onTranscript: (text: string) => void
+  onVoiceIntent?: (intent: TiloIntent, transcript: string) => void
   onListeningChange?: (isListening: boolean) => void
   onError?: (error: string) => void
   disabled?: boolean
@@ -16,6 +18,7 @@ interface MicButtonProps {
 
 export default function MicButton({
   onTranscript,
+  onVoiceIntent,
   onListeningChange,
   onError,
   disabled = false,
@@ -27,8 +30,16 @@ export default function MicButton({
   useEffect(() => {
     if (transcript) {
       onTranscript(transcript)
+
+      // Process voice intent if handler is provided
+      if (onVoiceIntent) {
+        const intent = detectIntent(transcript)
+        if (intent.confidence > 0.5) {
+          onVoiceIntent(intent, transcript)
+        }
+      }
     }
-  }, [transcript, onTranscript])
+  }, [transcript, onTranscript, onVoiceIntent])
 
   useEffect(() => {
     if (onError && error) {

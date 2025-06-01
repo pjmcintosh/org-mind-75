@@ -2,6 +2,8 @@
 
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
+import { detectIntent, logVoiceInteraction, type TiloIntent } from "@/lib/workflows/tilo-intents"
+import { webkitSpeechRecognition } from "some-speech-recognition-library" // Declare or import the variable here
 
 interface TiloInterfaceProps {
   onTextChange: (text: string) => void
@@ -16,10 +18,18 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
     const newText = event.target.value
     setText(newText)
     onTextChange(newText)
+
+    // If this text came from voice recognition, process it as an intent
+    if (newText && newText !== text) {
+      const intent = detectIntent(newText)
+      if (intent.confidence > 0.5) {
+        handleVoiceIntent(intent, newText)
+      }
+    }
   }
 
   const startListening = () => {
-    if ("webkitSpeechRecognition" in window) {
+    if (webkitSpeechRecognition) {
       const recognition = new webkitSpeechRecognition()
       recognition.continuous = true
       recognition.interimResults = true
@@ -60,7 +70,7 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
   }
 
   const stopListening = () => {
-    if ("webkitSpeechRecognition" in window) {
+    if (webkitSpeechRecognition) {
       // Find the active recognition instance and stop it.  This is a bit hacky
       // because we don't have a direct reference to the recognition object.
       // A better approach would be to store the recognition object in state.
@@ -74,7 +84,7 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
 
   useEffect(() => {
     // Hack to store recognition instances for stopping.
-    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
+    if (typeof window !== "undefined" && webkitSpeechRecognition) {
       if (!(window as any).webkitSpeechRecognitionInstances) {
         ;(window as any).webkitSpeechRecognitionInstances = []
       }
@@ -88,11 +98,112 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
     }
 
     return () => {
-      if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
+      if (typeof window !== "undefined" && webkitSpeechRecognition) {
         ;(window as any).webkitSpeechRecognitionInstances = []
       }
     }
   }, [])
+
+  const handleVoiceIntent = (intent: TiloIntent, transcript: string) => {
+    // Log the interaction for audit purposes
+    logVoiceInteraction(transcript, intent)
+
+    switch (intent.type) {
+      case "approve_poc":
+        submitPOCApproval("approved", transcript)
+        break
+      case "reject_poc":
+        submitPOCApproval("rejected", transcript)
+        break
+      case "get_status":
+        fetchTiloStatusReport()
+        break
+      case "get_todo":
+        fetchTiloActionItems()
+        break
+      case "delegate_task":
+        handleTaskDelegation(intent.entities?.agent, transcript)
+        break
+      case "show_dashboard":
+        navigateToDashboard()
+        break
+      case "agent_status":
+        fetchAgentStatus()
+        break
+      case "show_approvals":
+        navigateToApprovals()
+        break
+      case "show_help":
+        showTiloHelp()
+        break
+      default:
+        handleFallback(transcript)
+    }
+  }
+
+  // Agent action functions
+  const submitPOCApproval = (decision: "approved" | "rejected", transcript: string) => {
+    console.log(`POC ${decision} via voice:`, transcript)
+    // In real implementation, this would call the POC approval API
+    setText(`POC ${decision} - processing your request...`)
+    onTextChange(`POC ${decision} - processing your request...`)
+  }
+
+  const fetchTiloStatusReport = () => {
+    console.log("Fetching status report")
+    setText("Generating status report...")
+    onTextChange("Generating status report...")
+  }
+
+  const fetchTiloActionItems = () => {
+    console.log("Fetching action items")
+    setText("Here are your priority action items...")
+    onTextChange("Here are your priority action items...")
+  }
+
+  const handleTaskDelegation = (agent: string | null, transcript: string) => {
+    if (agent) {
+      console.log(`Delegating task to ${agent}:`, transcript)
+      setText(`Delegating task to ${agent}...`)
+      onTextChange(`Delegating task to ${agent}...`)
+    } else {
+      setText("Which agent should I delegate this to?")
+      onTextChange("Which agent should I delegate this to?")
+    }
+  }
+
+  const navigateToDashboard = () => {
+    console.log("Navigating to dashboard")
+    setText("Opening dashboard...")
+    onTextChange("Opening dashboard...")
+    // In real implementation: router.push('/admin/dashboard')
+  }
+
+  const fetchAgentStatus = () => {
+    console.log("Fetching agent status")
+    setText("Checking agent status...")
+    onTextChange("Checking agent status...")
+  }
+
+  const navigateToApprovals = () => {
+    console.log("Navigating to approvals")
+    setText("Opening approval queue...")
+    onTextChange("Opening approval queue...")
+    // In real implementation: router.push('/admin/ceo')
+  }
+
+  const showTiloHelp = () => {
+    const helpText =
+      "I can help with: POC approvals, status reports, task delegation, agent monitoring, and navigation."
+    setText(helpText)
+    onTextChange(helpText)
+  }
+
+  const handleFallback = (transcript: string) => {
+    const fallbackText = "I'm not sure how to help with that yet. Try saying 'help' to see what I can do."
+    setText(fallbackText)
+    onTextChange(fallbackText)
+  }
 
   return (
     <div>

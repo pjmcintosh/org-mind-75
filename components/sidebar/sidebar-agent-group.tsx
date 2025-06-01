@@ -11,6 +11,11 @@ import { getAgentGroupStorageKey } from "@/config/sidebar-config"
 import { entityTypes } from "@/lib/constants/entityTypes"
 import TiloAvatar from "@/components/tilo/TiloAvatar"
 
+// Add this new style
+const shadowGlowStyle = {
+  "shadow-glow-cyan": "box-shadow: 0 0 8px 2px rgba(34, 211, 238, 0.4)",
+}
+
 interface SidebarAgentGroupProps {
   agentGroup: SidebarAgentGroupType
   parentGroupKey: string
@@ -76,7 +81,9 @@ function SidebarAgentItem({
         {/* Agent Avatar or Entity Icon */}
         <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative">
           {isTilo ? (
-            <TiloAvatar state="idle" size="sm" />
+            <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative">
+              <TiloAvatar state="idle" size="md" className="border-2 border-cyan-400 shadow-glow-cyan" />
+            </div>
           ) : avatarPath ? (
             <img
               src={avatarPath || "/placeholder.svg"}
