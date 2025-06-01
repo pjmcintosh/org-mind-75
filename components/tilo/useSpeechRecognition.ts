@@ -66,7 +66,7 @@ export const useSpeechRecognition = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-      setIsSupported(!!SpeechRecognition)
+      setIsSupported(!!SpeechRecognition && window.isSecureContext)
     }
   }, [])
 

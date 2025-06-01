@@ -1,56 +1,84 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MessageCircle, Mic, X } from "lucide-react"
-import TiloInterface from "./TiloInterface"
-import { cn } from "@/lib/utils"
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface TiloPanelProps {
-  isOpen: boolean
-  onClose: () => void
-  className?: string
+  onTranscription: (transcription: string) => void
 }
 
-export default function TiloPanel({ isOpen, onClose, className = "" }: TiloPanelProps) {
-  const [mode, setMode] = useState<"chat" | "voice">("chat")
+const TiloPanel: React.FC<TiloPanelProps> = ({ onTranscription }) => {
+  const [isListening, setIsListening] = useState(false)
+  const [transcription, setTranscription] = useState("")
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
 
-  if (!isOpen) return null
+  useEffect(() => {
+    if ("webkitSpeechRecognition" in window) {
+      const recognition = new webkitSpeechRecognition()
+      recognition.continuous = true
+      recognition.interimResults = true
+      recognition.lang = "en-US" // You can change the language here
+
+      recognition.onstart = () => {
+        setIsListening(true)
+      }
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let interimTranscript = ""
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            setTranscription((prevTranscription) => prevTranscription + event.results[i][0].transcript)
+            onTranscription(transcription + event.results[i][0].transcript)
+          } else {
+            interimTranscript += event.results[i][0].transcript
+          }
+        }
+      }
+
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error("Speech recognition error:", event.error)
+        setIsListening(false)
+      }
+
+      recognition.onend = () => {
+        setIsListening(false)
+      }
+
+      recognitionRef.current = recognition
+    } else {
+      console.warn("Web Speech API is not supported in this browser.")
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort()
+      }
+    }
+  }, [onTranscription, transcription])
+
+  const startListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.start()
+    }
+  }
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+    }
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <Card className={cn("w-full max-w-3xl mx-4 bg-slate-900/95 border-slate-700", className)}>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-cyan-400">Tilo Assistant</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={mode === "chat" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setMode("chat")}
-              className="text-xs"
-            >
-              <MessageCircle className="w-3 h-3 mr-1" />
-              Chat
-            </Button>
-            <Button
-              variant={mode === "voice" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setMode("voice")}
-              className="text-xs"
-            >
-              <Mic className="w-3 h-3 mr-1" />
-              Voice
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <TiloInterface mode={mode} />
-        </CardContent>
-      </Card>
+    <div>
+      <button onClick={startListening} disabled={isListening}>
+        Start Listening
+      </button>
+      <button onClick={stopListening} disabled={!isListening}>
+        Stop Listening
+      </button>
+      <p>Transcription: {transcription}</p>
     </div>
   )
 }
+
+export default TiloPanel
