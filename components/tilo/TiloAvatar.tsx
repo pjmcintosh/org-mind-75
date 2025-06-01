@@ -15,6 +15,7 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [currentVideo, setCurrentVideo] = useState<string>("")
+  const [fallbackActive, setFallbackActive] = useState(false)
 
   // Size mapping
   const sizeClasses = {
@@ -39,34 +40,41 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
         // Play when loaded
         videoRef.current.onloadeddata = () => {
           setVideoLoaded(true)
-          videoRef.current?.play()
+          setFallbackActive(false)
+          videoRef.current?.play().catch((err) => {
+            console.error("Error playing Tilo animation:", err)
+            setFallbackActive(true)
+          })
         }
 
         // Handle errors
         videoRef.current.onerror = (e) => {
           console.error("Error loading Tilo animation:", e)
           setVideoLoaded(false)
+          setFallbackActive(true)
         }
       }
     }
   }, [state, currentVideo])
 
   return (
-    <div className={`relative rounded-full overflow-hidden bg-gray-800 ${sizeClasses[size]} ${className}`}>
+    <div className={`relative rounded-full overflow-hidden bg-cyan-900/30 ${sizeClasses[size]} ${className}`}>
       {/* Video element */}
       <video
         ref={videoRef}
-        className={`w-full h-full object-cover ${videoLoaded ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover ${videoLoaded && !fallbackActive ? "opacity-100" : "opacity-0"}`}
         autoPlay
         muted
         loop
         playsInline
       />
 
-      {/* Fallback image while video loads */}
-      {!videoLoaded && (
+      {/* Fallback image or animation when video fails */}
+      {(!videoLoaded || fallbackActive) && (
         <div className="absolute inset-0 flex items-center justify-center bg-cyan-900/30">
-          <div className="w-1/2 h-1/2 rounded-full bg-cyan-400 animate-pulse" />
+          <div className="w-3/4 h-3/4 rounded-full bg-cyan-400/80 animate-pulse flex items-center justify-center">
+            <div className="w-1/2 h-1/2 rounded-full bg-cyan-200 animate-ping opacity-75"></div>
+          </div>
         </div>
       )}
     </div>

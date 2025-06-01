@@ -4,7 +4,15 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { detectIntent, getIntentResponse, logVoiceInteraction, type TiloIntent } from "@/lib/workflows/tilo-intents"
 import { useTiloState } from "./useTiloState"
-import { webkitSpeechRecognition } from "some-speech-recognition-library" // Declare the variable here
+import { speak, stopSpeaking } from "@/lib/voice/speech"
+
+// Web Speech API type declarations
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any
+    SpeechRecognition: any
+  }
+}
 
 interface TiloInterfaceProps {
   onTextChange: (text: string) => void
@@ -13,9 +21,23 @@ interface TiloInterfaceProps {
 const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
   const [text, setText] = useState("")
   const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const { tiloState, setTiloState } = useTiloState()
+
+  // Helper function to respond with both text and speech
+  const respondWithSpeech = (response: string, delay = 2000) => {
+    onTextChange(response)
+    setIsSpeaking(true)
+    speak(response)
+
+    // Return to idle state after speaking
+    setTimeout(() => {
+      setTiloState("idle")
+      setIsSpeaking(false)
+    }, delay)
+  }
 
   function handleVoiceIntent(intent: TiloIntent, transcript: string) {
     // Log the interaction
@@ -58,69 +80,59 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
         break
       default:
         const response = getIntentResponse(intent, transcript)
-        onTextChange(response)
-        setTimeout(() => setTiloState("idle"), 2000)
+        respondWithSpeech(response)
     }
   }
 
-  // Agent action functions
+  // Agent action functions with speech integration
   function submitPOCApproval(decision: "approved" | "rejected", transcript: string) {
-    // Simulate POC approval workflow
     const response = `POC ${decision}. I've updated the approval queue and notified the relevant stakeholders.`
-    onTextChange(response)
-    setTimeout(() => setTiloState("idle"), 3000)
+    respondWithSpeech(response, 3000)
   }
 
   function fetchTiloStatusReport() {
     const response = "Current status: 3 POCs pending approval, 2 agents require attention, 1 compliance review due."
-    onTextChange(response)
-    setTimeout(() => setTiloState("idle"), 2000)
+    respondWithSpeech(response)
   }
 
   function fetchTiloActionItems() {
     const response =
       "Priority items: Review Ada's compliance report, approve Max's budget request, delegate security audit to Eve."
-    onTextChange(response)
-    setTimeout(() => setTiloState("idle"), 2000)
+    respondWithSpeech(response)
   }
 
   function handleTaskDelegation(agent: string | null, transcript: string) {
+    let response: string
     if (agent) {
-      const response = `Task delegated to ${agent.charAt(0).toUpperCase() + agent.slice(1)}. I've created the workflow and sent notifications.`
-      onTextChange(response)
+      response = `Task delegated to ${agent.charAt(0).toUpperCase() + agent.slice(1)}. I've created the workflow and sent notifications.`
     } else {
-      const response =
+      response =
         "Which agent should I delegate this task to? Available: Ada, Bob, Max, Eve, Ephrya, Janet, Lexi, Shandry, Erik."
-      onTextChange(response)
     }
-    setTimeout(() => setTiloState("idle"), 2000)
+    respondWithSpeech(response)
   }
 
   function fetchFinancialData() {
     const response =
-      "Financial summary: Budget utilization at 67%, projected savings of $45K this quarter, 2 cost optimization opportunities identified."
-    onTextChange(response)
-    setTimeout(() => setTiloState("idle"), 2000)
+      "Financial summary: Budget utilisation at 67%, projected savings of £45,000 this quarter, 2 cost optimisation opportunities identified."
+    respondWithSpeech(response)
   }
 
   function fetchComplianceStatus() {
     const response = "Compliance status: All agents compliant, next audit in 30 days, 1 policy update pending review."
-    onTextChange(response)
-    setTimeout(() => setTiloState("idle"), 2000)
+    respondWithSpeech(response)
   }
 
   function fetchPerformanceMetrics() {
     const response =
-      "Performance overview: Average agent efficiency 94%, 3 agents exceeding targets, 1 optimization recommendation available."
-    onTextChange(response)
-    setTimeout(() => setTiloState("idle"), 2000)
+      "Performance overview: Average agent efficiency 94%, 3 agents exceeding targets, 1 optimisation recommendation available."
+    respondWithSpeech(response)
   }
 
   function showTiloHelp() {
     const response =
-      "I can help with: POC approvals ('approve proof of concept'), status updates ('what's the status'), task delegation ('delegate to Ada'), and more. What would you like to do?"
-    onTextChange(response)
-    setTimeout(() => setTiloState("idle"), 2000)
+      "I can help with: POC approvals, status updates, task delegation, and more. What would you like to do?"
+    respondWithSpeech(response)
   }
 
   const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -138,38 +150,60 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
   }
 
   const startListening = () => {
-    if (webkitSpeechRecognition) {
-      const recognition = new webkitSpeechRecognition()
+    // Stop any ongoing speech before listening
+    stopSpeaking()
+    setIsSpeaking(false)
+
+    if ("webkitSpeechRecognition" in window) {
+      const recognition = new window.webkitSpeechRecognition()
       recognition.continuous = true
       recognition.interimResults = true
-      recognition.lang = "en-US"
+      recognition.lang = "en-GB" // UK English for input as well
 
       recognition.onstart = () => {
         setIsListening(true)
+        setTiloState("listening")
       }
 
       recognition.onresult = (event) => {
         let interimTranscript = ""
+        let finalTranscript = ""
+
         for (let i = event.resultIndex; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
-            setText((prevText) => prevText + event.results[i][0].transcript)
-            onTextChange((prevText) => prevText + event.results[i][0].transcript)
+            finalTranscript += event.results[i][0].transcript
           } else {
             interimTranscript += event.results[i][0].transcript
           }
         }
+
+        if (finalTranscript) {
+          setText((prevText) => prevText + finalTranscript)
+          onTextChange((prevText) => prevText + finalTranscript)
+
+          // Process the final transcript for intents
+          const intent = detectIntent(finalTranscript)
+          if (intent.confidence > 0.6) {
+            handleVoiceIntent(intent, finalTranscript)
+          }
+        }
+
         if (textareaRef.current) {
-          textareaRef.current.value = text + interimTranscript
+          textareaRef.current.value = text + finalTranscript + interimTranscript
         }
       }
 
       recognition.onerror = (event) => {
         console.error("Speech recognition error:", event.error)
         setIsListening(false)
+        setTiloState("idle")
       }
 
       recognition.onend = () => {
         setIsListening(false)
+        if (!isSpeaking) {
+          setTiloState("idle")
+        }
       }
 
       recognition.start()
@@ -179,21 +213,21 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
   }
 
   const stopListening = () => {
-    if (webkitSpeechRecognition) {
-      // Find the active recognition instance and stop it.  This is a bit hacky
-      // because we don't have a direct reference to the recognition object.
-      // A better approach would be to store the recognition object in state.
+    if ("webkitSpeechRecognition" in window) {
       const recognitions = (window as any).webkitSpeechRecognitionInstances || []
       if (recognitions.length > 0) {
         recognitions[recognitions.length - 1].stop()
       }
       setIsListening(false)
+      if (!isSpeaking) {
+        setTiloState("idle")
+      }
     }
   }
 
   useEffect(() => {
-    // Hack to store recognition instances for stopping.
-    if (typeof window !== "undefined" && webkitSpeechRecognition) {
+    // Initialize speech recognition instances tracking
+    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
       if (!(window as any).webkitSpeechRecognitionInstances) {
         ;(window as any).webkitSpeechRecognitionInstances = []
       }
@@ -207,14 +241,16 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
     }
 
     return () => {
-      if (typeof window !== "undefined" && webkitSpeechRecognition) {
+      if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
         ;(window as any).webkitSpeechRecognitionInstances = []
       }
+      // Stop any ongoing speech when component unmounts
+      stopSpeaking()
     }
   }, [])
 
   return (
-    <div>
+    <div className="space-y-4">
       <textarea
         ref={textareaRef}
         value={text}
@@ -222,12 +258,36 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
         placeholder="Type or speak here..."
         rows={5}
         cols={50}
+        className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-400"
       />
-      <div>
-        <button onClick={isListening ? stopListening : startListening}>
+      <div className="flex gap-2">
+        <button
+          onClick={isListening ? stopListening : startListening}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            isListening ? "bg-red-500 hover:bg-red-600 text-white" : "bg-cyan-500 hover:bg-cyan-600 text-white"
+          }`}
+        >
           {isListening ? "Stop Listening" : "Start Listening"}
         </button>
+        {isSpeaking && (
+          <button
+            onClick={() => {
+              stopSpeaking()
+              setIsSpeaking(false)
+              setTiloState("idle")
+            }}
+            className="px-4 py-2 rounded-lg font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors"
+          >
+            Stop Speaking
+          </button>
+        )}
       </div>
+      {(isListening || isSpeaking) && (
+        <div className="text-sm text-gray-600">
+          {isListening && "🎤 Listening..."}
+          {isSpeaking && "🔊 Tilo is speaking..."}
+        </div>
+      )}
     </div>
   )
 }

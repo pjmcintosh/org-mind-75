@@ -6,11 +6,8 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Home } from "lucide-react"
+import { Menu, Home, Settings } from "lucide-react"
 import { useRole } from "@/lib/context/role-context"
-import { LanguageModeToggle } from "./sidebar/language-mode-toggle"
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { humanLabels } from "@/lib/constants/humanLabels"
 import { getSidebarConfigByRole } from "@/config/sidebar-config"
 import { usePathname, useRouter } from "next/navigation"
 import { SidebarNavGroup } from "./sidebar/sidebar-nav-group"
@@ -76,7 +73,7 @@ export function AdminSidebarContent({ className, userRole }: AdminSidebarContent
         className,
       )}
     >
-      {/* Header with Language Toggle */}
+      {/* Header with Logo and Settings */}
       <div className="flex h-16 items-center justify-between border-b border-slate-700 px-6">
         <Link
           href="/"
@@ -85,74 +82,59 @@ export function AdminSidebarContent({ className, userRole }: AdminSidebarContent
           <Home className="h-6 w-6" />
           <span className="text-lg">Tilo</span>
         </Link>
-        <LanguageModeToggle onModeChange={handleLanguageModeChange} />
+        <Link href="/admin/settings">
+          <Settings className="h-5 w-5 text-slate-400 hover:text-slate-100 transition-colors" />
+        </Link>
       </div>
 
-      {/* Wrap both Tilo orb and navigation in TooltipProvider */}
-      <TooltipProvider>
-        {/* Tilo 3D Orb - Always Display */}
-        <div className="flex flex-col items-center justify-center mt-4 mb-6 px-4">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={handleTiloClick}
-                className="w-20 h-20 mb-3 rounded-full transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
-                aria-label="Ask Tilo"
-              >
-                <TiloAvatar state="idle" size="lg" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Ask Tilo a question</p>
-            </TooltipContent>
-          </Tooltip>
-          <p className="text-sm text-slate-400 font-medium text-center">
-            {languageMode === "humanized" ? "Tilo is here to help" : "AI Assistant"}
-          </p>
-        </div>
+      {/* Tilo Avatar Section */}
+      <div className="flex flex-col items-center justify-center py-6 px-4">
+        <button
+          onClick={handleTiloClick}
+          className="w-24 h-24 mb-3 rounded-full transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-500/40"
+          aria-label="Ask Tilo"
+        >
+          <TiloAvatar state="idle" size="xl" />
+        </button>
+      </div>
 
-        {/* Role Indicator */}
-        <div className="px-4 py-3 border-b border-slate-700">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-400 font-medium tracking-tight">
-              {languageMode === "humanized" ? "Viewing as:" : "Role:"}
-            </span>
-            <div className="bg-slate-800 text-cyan-400 rounded-full px-3 py-1 text-xs shadow-md font-medium">
-              {effectiveRole}
-            </div>
+      {/* Role Indicator */}
+      <div className="px-4 py-3 border-b border-slate-700">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-400 font-medium tracking-tight">Viewing as:</span>
+          <div className="bg-cyan-900/50 text-cyan-400 rounded-full px-3 py-1 text-xs shadow-md font-medium">
+            {effectiveRole}
           </div>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-          {Object.entries(filteredSidebarConfig).map(([key, group]) => {
-            // Skip groups with no visible content
-            const hasVisibleItems =
-              (group.items && group.items.length > 0) ||
-              (group.agentGroups && group.agentGroups.some((ag) => ag.items.length > 0))
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+        {Object.entries(filteredSidebarConfig).map(([key, group]) => {
+          // Skip groups with no visible content
+          const hasVisibleItems =
+            (group.items && group.items.length > 0) ||
+            (group.agentGroups && group.agentGroups.some((ag) => ag.items.length > 0))
 
-            if (!hasVisibleItems) return null
+          if (!hasVisibleItems) return null
 
-            return (
-              <SidebarNavGroup
-                key={key}
-                group={group}
-                groupKey={key}
-                isAssistant={key === "assistant"}
-                languageMode={languageMode}
-                showTooltips={true}
-              />
-            )
-          })}
-        </nav>
-      </TooltipProvider>
+          return (
+            <SidebarNavGroup
+              key={key}
+              group={group}
+              groupKey={key}
+              isAssistant={key === "assistant"}
+              languageMode={languageMode}
+              showTooltips={true}
+            />
+          )
+        })}
+      </nav>
 
       {/* System Status */}
       <div className="text-xs text-slate-400 px-4 py-3 border-t border-slate-700">
-        {languageMode === "humanized" ? "System Status:" : "Status:"}
-        <span className="text-green-400 font-semibold ml-1">
-          {languageMode === "humanized" ? humanLabels?.status?.active || "Active" : "Online"}
-        </span>
+        System Status:
+        <span className="text-green-400 font-semibold ml-1">Active</span>
       </div>
     </div>
   )

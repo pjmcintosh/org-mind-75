@@ -5,11 +5,10 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ChevronDown, ChevronRight, Brain, Users, Eye, LinkIcon } from "lucide-react"
+import { ChevronDown, ChevronRight, Brain, Users, Eye, LinkIcon, Bot } from "lucide-react"
 import type { SidebarAgentGroup as SidebarAgentGroupType, SidebarItem } from "@/config/sidebar-config"
 import { getAgentGroupStorageKey } from "@/config/sidebar-config"
 import { entityTypes } from "@/lib/constants/entityTypes"
-import TiloAvatar from "@/components/tilo/TiloAvatar"
 
 interface SidebarAgentGroupProps {
   agentGroup: SidebarAgentGroupType
@@ -77,11 +76,13 @@ function SidebarAgentItem({
         <div
           className={cn(
             "rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative",
-            isTilo ? "w-24 h-24 border-2 border-cyan-400 shadow-md" : "w-6 h-6",
+            "w-6 h-6", // Consistent size for all agents including Tilo
           )}
         >
           {isTilo ? (
-            <TiloAvatar state="idle" size="lg" />
+            <div className="w-6 h-6 rounded-full bg-cyan-900/50 flex items-center justify-center border border-cyan-500/30">
+              <Bot className="w-4 h-4 text-cyan-400" />
+            </div>
           ) : avatarPath ? (
             <img
               src={avatarPath || "/placeholder.svg"}

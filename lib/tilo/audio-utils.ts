@@ -1,44 +1,26 @@
 "use client"
 
+import { speak as tiloSpeak } from "@/lib/voice/speech"
+
 /**
- * Speaks text using the browser's native Speech Synthesis API
+ * Speaks text using Tilo's UK female voice
  */
 export function speakText(text: string): void {
-  if (typeof window !== "undefined" && "speechSynthesis" in window) {
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel()
-
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.rate = 1.0
-    utterance.pitch = 1.0
-    utterance.volume = 1.0
-    utterance.lang = "en-US"
-
-    // Optional: Select a voice if available
-    const voices = window.speechSynthesis.getVoices()
-    const preferredVoice = voices.find(
-      (voice) => voice.name.includes("Google") || voice.name.includes("Female") || voice.name.includes("Samantha"),
-    )
-    if (preferredVoice) {
-      utterance.voice = preferredVoice
-    }
-
-    window.speechSynthesis.speak(utterance)
-  }
+  tiloSpeak(text)
 }
 
 /**
- * Returns a greeting based on the time of day
+ * Returns a greeting based on the time of day (UK style)
  */
 export function getTimeBasedGreeting(): string {
   const hour = new Date().getHours()
   if (hour < 12) return "Good morning."
-  if (hour < 18) return "Good afternoon."
+  if (hour < 17) return "Good afternoon."
   return "Good evening."
 }
 
 /**
- * Returns mock CEO status update data
+ * Returns mock CEO status update data (UK terminology)
  */
 export function getCEOStatusUpdate(): { summary: string; actionItems: string[] } {
   return {
