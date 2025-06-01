@@ -7,8 +7,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Send, User, Brain, Sparkles } from "lucide-react"
 import TiloAvatar from "@/components/tilo/TiloAvatar"
-import MicButton from "@/components/tilo/MicButton" // This is importing our MicButton
-import { useTiloState } from "@/components/tilo/useTiloState"
+import MicButton from "@/components/tilo/MicButton"
 import { speakText, getTimeBasedGreeting, getCEOStatusUpdate } from "@/lib/tilo/audio-utils"
 import { useUserRole } from "@/lib/useUserRole"
 
@@ -27,20 +26,10 @@ export default function DesktopTiloPage() {
   const [showTips, setShowTips] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [isListening, setIsListening] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [tiloState, setTiloState] = useState<"idle" | "listening" | "alert">("idle")
+  const [speechError, setSpeechError] = useState<string | null>(null)
   const { role } = useUserRole()
-
-  const {
-    tiloState,
-    isProcessing,
-    speechSupported,
-    lastResponse,
-    speechError,
-    startListening,
-    setProcessing,
-    setLastResponse,
-  } = useTiloState({
-    onTranscript: handleVoiceInput,
-  })
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -53,7 +42,19 @@ export default function DesktopTiloPage() {
     setCurrentRole(storedRole)
   }, [])
 
+  // Update Tilo state based on listening and processing states
+  useEffect(() => {
+    if (isListening) {
+      setTiloState("listening")
+    } else if (isProcessing) {
+      setTiloState("alert")
+    } else {
+      setTiloState("idle")
+    }
+  }, [isListening, isProcessing])
+
   function handleVoiceInput(transcript: string) {
+    console.log("Voice transcript received:", transcript)
     if (transcript.trim()) {
       handleUserMessage(transcript)
     }
@@ -76,7 +77,7 @@ export default function DesktopTiloPage() {
   }
 
   async function processUserMessage(content: string) {
-    setProcessing(true)
+    setIsProcessing(true)
 
     // Simulate processing delay
     await new Promise((resolve) => setTimeout(resolve, 1500))
@@ -109,8 +110,7 @@ export default function DesktopTiloPage() {
     }
 
     setMessages((prev) => [...prev, tiloMessage])
-    setLastResponse(response)
-    setProcessing(false)
+    setIsProcessing(false)
 
     // Speak the response if it's not too long
     if (response.length < 200) {
@@ -131,9 +131,13 @@ export default function DesktopTiloPage() {
     }
   }
 
-  const handleVoiceTranscript = (transcript: string) => {
-    setInputValue(transcript)
-    // Process transcript
+  function handleListeningChange(listening: boolean) {
+    setIsListening(listening)
+  }
+
+  function handleSpeechError(error: string) {
+    console.error("Speech recognition error:", error)
+    setSpeechError(error)
   }
 
   return (
@@ -246,9 +250,13 @@ export default function DesktopTiloPage() {
             />
 
             {/* Voice Button */}
-            {speechSupported && (
-              <MicButton onTranscript={handleVoiceTranscript} onListeningChange={setIsListening} size="md" />
-            )}
+            <MicButton
+              onTranscript={handleVoiceInput}
+              onListeningChange={handleListeningChange}
+              onError={handleSpeechError}
+              disabled={isProcessing}
+              size="md"
+            />
 
             {/* Send Button */}
             <Button

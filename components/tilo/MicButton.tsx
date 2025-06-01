@@ -1,64 +1,82 @@
 "use client"
 
-import React from "react"
-import { Mic, MicOff, AlertCircle, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import { Mic, MicOff } from "lucide-react"
 import { useSpeechRecognition } from "./useSpeechRecognition"
 
-export interface MicButtonProps {
-  onTranscript: (text: string) => void
-  onError?: (error: string) => void
+interface MicButtonProps {
+  onTranscript: (transcript: string) => void
   onListeningChange?: (isListening: boolean) => void
+  onError?: (error: string) => void
   disabled?: boolean
-  className?: string
   size?: "sm" | "md" | "lg"
+  className?: string
 }
 
 export default function MicButton({
   onTranscript,
-  onError,
   onListeningChange,
+  onError,
   disabled = false,
-  className = "",
   size = "md",
+  className = "",
 }: MicButtonProps) {
-  const { isListening, isSupported, startListening, stopListening, error, isProcessing } = useSpeechRecognition({
-    onResult: (transcript) => {
-      console.log("Transcript received:", transcript)
-      onTranscript(transcript)
-    },
-    onError: (errorMessage) => {
-      console.error("Speech error:", errorMessage)
-      if (onError) {
-        onError(errorMessage)
-      }
-    },
-  })
+  const { isListening, transcript, startListening, stopListening, isSupported, error } = useSpeechRecognition()
+  const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null)
 
-  // Notify parent when listening state changes
-  React.useEffect(() => {
+  // Check microphone permissions on mount
+  useEffect(() => {
+    async function checkMicrophonePermission() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const audioInputs = devices.filter((device) => device.kind === "audioinput")
+
+        if (audioInputs.length === 0) {
+          setPermissionGranted(false)
+          if (onError) onError("No microphone detected")
+          return
+        }
+
+        // Try to access the microphone
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        setPermissionGranted(true)
+
+        // Stop the stream immediately after checking permission
+        stream.getTracks().forEach((track) => track.stop())
+      } catch (err) {
+        console.error("Microphone permission error:", err)
+        setPermissionGranted(false)
+        if (onError) onError("Microphone access denied")
+      }
+    }
+
+    checkMicrophonePermission()
+  }, [onError])
+
+  // Notify parent component when listening state changes
+  useEffect(() => {
     if (onListeningChange) {
       onListeningChange(isListening)
     }
   }, [isListening, onListeningChange])
 
-  // Size classes based on the size prop
-  const sizeClasses = {
-    sm: "w-10 h-10",
-    md: "w-14 h-14",
-    lg: "w-16 h-16",
-  }
+  // Pass transcript to parent when it changes
+  useEffect(() => {
+    if (transcript && transcript.trim() !== "") {
+      onTranscript(transcript)
+    }
+  }, [transcript, onTranscript])
 
-  const iconSizeClasses = {
-    sm: "w-4 h-4",
-    md: "w-5 h-5",
-    lg: "w-6 h-6",
-  }
+  // Pass errors to parent
+  useEffect(() => {
+    if (error && onError) {
+      onError(error)
+    }
+  }, [error, onError])
 
   // Handle button click
-  const handleClick = () => {
-    console.log("Mic button clicked, isListening:", isListening)
-
+  const handleToggleMic = () => {
     if (isListening) {
       stopListening()
     } else {
@@ -66,65 +84,29 @@ export default function MicButton({
     }
   }
 
-  // If speech recognition is not supported, show a disabled button
+  // Size classes
+  const sizeClasses = {
+    sm: "w-8 h-8",
+    md: "w-10 h-10",
+    lg: "w-12 h-12",
+  }
+
+  // If speech recognition is not supported
   if (!isSupported) {
-    return (
-      <div className="flex flex-col items-center">
-        <Button
-          disabled
-          className={`rounded-full bg-gray-500 text-white shadow-lg opacity-50 ${sizeClasses[size]} ${className}`}
-          aria-label="Voice input not supported"
-          title="Voice input not supported. Please use Chrome or Edge browser."
-        >
-          <AlertCircle className={iconSizeClasses[size]} />
-        </Button>
-        <p className="text-xs text-gray-400 mt-1 text-center max-w-[120px]">Use Chrome/Edge</p>
-      </div>
-    )
+    return null
   }
 
   return (
-    <div className="flex flex-col items-center">
-      <Button
-        onClick={handleClick}
-        disabled={disabled}
-        className={`rounded-full transition-all duration-300 ${
-          isListening
-            ? isProcessing
-              ? "bg-green-500 hover:bg-green-600 shadow-lg shadow-green-500/50"
-              : "bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/50 animate-pulse"
-            : "bg-cyan-400 hover:bg-cyan-500 shadow-lg shadow-cyan-400/30"
-        } ${sizeClasses[size]} ${className}`}
-        aria-label={isListening ? "Stop listening" : "Start voice input"}
-        title={isListening ? "Click to stop listening" : "Click to start voice input"}
-      >
-        {isListening ? (
-          isProcessing ? (
-            <Loader2 className={`${iconSizeClasses[size]} animate-spin`} />
-          ) : (
-            <MicOff className={iconSizeClasses[size]} />
-          )
-        ) : (
-          <Mic className={iconSizeClasses[size]} />
-        )}
-      </Button>
-
-      {/* Status text */}
-      {isListening && (
-        <p className="text-xs mt-1 text-center">
-          {isProcessing ? (
-            <span className="text-green-400">Processing...</span>
-          ) : (
-            <span className="text-red-400 animate-pulse">Speak now</span>
-          )}
-        </p>
-      )}
-
-      {/* Error display - show briefly and auto-clear */}
-      {error && !isListening && <p className="text-xs text-amber-400 mt-1 max-w-[200px] text-center">{error}</p>}
-
-      {/* Helpful tip when not listening */}
-      {!isListening && !error && <p className="text-xs text-gray-500 mt-1 text-center max-w-[120px]">Click & speak</p>}
-    </div>
+    <Button
+      onClick={handleToggleMic}
+      disabled={disabled || permissionGranted === false}
+      className={`rounded-full flex items-center justify-center ${sizeClasses[size]} ${
+        isListening ? "bg-red-500 hover:bg-red-600 text-white" : "bg-cyan-600 hover:bg-cyan-700 text-white"
+      } ${className}`}
+      type="button"
+      aria-label={isListening ? "Stop listening" : "Start listening"}
+    >
+      {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+    </Button>
   )
 }
