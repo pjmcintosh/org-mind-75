@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react"
 
-export type TiloState = "idle" | "listening" | "alert"
+export type TiloState = "idle" | "listening" | "alert" | "processing"
 
 interface UseTiloStateOptions {
   onTranscript?: (transcript: string) => void
@@ -41,7 +41,7 @@ declare global {
 }
 
 export function useTiloState(options: UseTiloStateOptions = {}) {
-  const [tiloState, setTiloState] = useState<TiloState>("idle")
+  const [tiloState, setTiloStateInternal] = useState<TiloState>("idle")
   const [isListening, setIsListening] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
@@ -66,7 +66,7 @@ export function useTiloState(options: UseTiloStateOptions = {}) {
 
         recognition.onstart = () => {
           setIsListening(true)
-          setTiloState("listening")
+          setTiloStateInternal("listening")
           setSpeechError(null)
         }
 
@@ -77,13 +77,13 @@ export function useTiloState(options: UseTiloStateOptions = {}) {
 
         recognition.onend = () => {
           setIsListening(false)
-          setTiloState("idle")
+          setTiloStateInternal("idle")
         }
 
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
           console.error("Speech recognition error:", event.error)
           setIsListening(false)
-          setTiloState("idle")
+          setTiloStateInternal("idle")
 
           let errorMessage = ""
           switch (event.error) {
@@ -124,6 +124,17 @@ export function useTiloState(options: UseTiloStateOptions = {}) {
     }
   }, [onTranscript, onError])
 
+  const setTiloState = useCallback((newState: TiloState) => {
+    setTiloStateInternal(newState)
+
+    // Auto-return to idle after certain states
+    if (newState === "alert" || newState === "processing") {
+      setTimeout(() => {
+        setTiloStateInternal("idle")
+      }, 3000)
+    }
+  }, [])
+
   const startListening = useCallback(() => {
     if (!speechSupported) {
       const error = "Speech recognition is not supported in your browser."
@@ -147,16 +158,15 @@ export function useTiloState(options: UseTiloStateOptions = {}) {
     }
   }, [speechSupported, isListening, onError])
 
-  const setProcessing = useCallback((processing: boolean) => {
-    setIsProcessing(processing)
-    setTiloState(processing ? "alert" : "idle")
-  }, [])
-
   const stopListening = useCallback(() => {
     if (recognitionRef.current && isListening) {
       recognitionRef.current.stop()
     }
   }, [isListening])
+
+  const setProcessing = useCallback((newProcessingState: boolean) => {
+    setIsProcessing(newProcessingState)
+  }, [])
 
   return {
     tiloState,

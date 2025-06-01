@@ -16,55 +16,56 @@ export function detectIntent(transcript: string): TiloIntent {
     return { type: "reject_poc", confidence: 0.9 }
   }
 
-  // Status and reporting intents
+  // Status and updates
   if (lower.includes("status") || lower.includes("update") || lower.includes("report")) {
     return { type: "get_status", confidence: 0.8 }
   }
 
-  // Priority and todo intents
-  if (lower.includes("what") && (lower.includes("next") || lower.includes("priority"))) {
+  // Priority and todo items
+  if (
+    lower.includes("what is next") ||
+    lower.includes("priority") ||
+    lower.includes("todo") ||
+    lower.includes("action items")
+  ) {
     return { type: "get_todo", confidence: 0.8 }
   }
 
-  if (lower.includes("todo") || lower.includes("action items")) {
-    return { type: "get_todo", confidence: 0.8 }
-  }
-
-  // Agent delegation intents
+  // Agent delegation
   if (lower.includes("delegate") || lower.includes("assign")) {
     const agentMatch = extractAgentName(lower)
     return {
       type: "delegate_task",
-      confidence: 0.7,
+      confidence: agentMatch ? 0.8 : 0.6,
       entities: { agent: agentMatch },
     }
   }
 
-  // Dashboard and navigation intents
-  if (lower.includes("show") && (lower.includes("dashboard") || lower.includes("overview"))) {
-    return { type: "show_dashboard", confidence: 0.8 }
+  // Financial queries
+  if (lower.includes("budget") || lower.includes("cost") || lower.includes("financial")) {
+    return { type: "get_financial", confidence: 0.7 }
   }
 
-  // Agent status intents
-  if (lower.includes("agent") && lower.includes("status")) {
-    return { type: "agent_status", confidence: 0.8 }
+  // Compliance queries
+  if (lower.includes("compliance") || lower.includes("audit") || lower.includes("regulation")) {
+    return { type: "get_compliance", confidence: 0.7 }
   }
 
-  // Approval queue intents
-  if (lower.includes("approval") && lower.includes("queue")) {
-    return { type: "show_approvals", confidence: 0.8 }
+  // Agent performance
+  if (lower.includes("performance") || lower.includes("metrics") || lower.includes("analytics")) {
+    return { type: "get_performance", confidence: 0.7 }
   }
 
-  // Help intents
-  if (lower.includes("help") || lower.includes("what can you do")) {
-    return { type: "show_help", confidence: 0.9 }
+  // Help and guidance
+  if (lower.includes("help") || lower.includes("how") || lower.includes("what can")) {
+    return { type: "get_help", confidence: 0.9 }
   }
 
   return { type: "fallback", confidence: 0.1 }
 }
 
 function extractAgentName(transcript: string): string | null {
-  const agents = ["ada", "bob", "max", "ephrya", "eve", "janet", "lexi", "shandry", "erik"]
+  const agents = ["ada", "bob", "max", "eve", "ephrya", "janet", "lexi", "shandry", "erik"]
 
   for (const agent of agents) {
     if (transcript.includes(agent)) {
@@ -78,44 +79,51 @@ function extractAgentName(transcript: string): string | null {
 export function getIntentResponse(intent: TiloIntent, transcript: string): string {
   switch (intent.type) {
     case "approve_poc":
-      return "I'll process the POC approval for you."
+      return "Processing POC approval. I'll route this to the appropriate workflow."
     case "reject_poc":
-      return "I'll process the POC rejection."
+      return "Processing POC rejection. I'll document the decision and notify stakeholders."
     case "get_status":
-      return "Let me get the latest status report."
+      return "Gathering current status across all active projects and agents."
     case "get_todo":
-      return "Here are your priority action items."
+      return "Retrieving your priority action items and next steps."
     case "delegate_task":
       const agent = intent.entities?.agent
-      return agent ? `I'll delegate this task to ${agent}.` : "Which agent should I delegate this to?"
-    case "show_dashboard":
-      return "Opening the dashboard overview."
-    case "agent_status":
-      return "Here's the current agent status."
-    case "show_approvals":
-      return "Showing the approval queue."
-    case "show_help":
-      return "Here's what I can help you with: POC approvals, status reports, task delegation, and more."
+      return agent
+        ? `Delegating task to ${agent.charAt(0).toUpperCase() + agent.slice(1)}. I'll set up the workflow.`
+        : "I'll help you delegate this task. Which agent should handle it?"
+    case "get_financial":
+      return "Pulling financial data and budget information."
+    case "get_compliance":
+      return "Checking compliance status and audit requirements."
+    case "get_performance":
+      return "Analyzing agent performance metrics and trends."
+    case "get_help":
+      return "I can help with POC approvals, status updates, task delegation, and more. What would you like to do?"
     default:
-      return "I'm not sure how to help with that yet. Try saying 'help' to see what I can do."
+      return "I'm not sure how to help with that yet. Try asking about status, approvals, or delegating tasks."
   }
 }
 
-// Store transcript and intent for audit purposes
-export function logVoiceInteraction(transcript: string, intent: TiloIntent) {
-  const interaction = {
-    timestamp: new Date().toISOString(),
-    transcript,
-    intent: intent.type,
-    confidence: intent.confidence,
-    entities: intent.entities,
+// Audit logging for voice interactions
+export interface VoiceInteractionLog {
+  timestamp: Date
+  transcript: string
+  intent: TiloIntent
+  action: string
+  userId?: string
+}
+
+export function logVoiceInteraction(log: Omit<VoiceInteractionLog, "timestamp">): void {
+  const fullLog: VoiceInteractionLog = {
+    ...log,
+    timestamp: new Date(),
   }
 
-  // In a real app, this would go to a database
-  console.log("Voice Interaction:", interaction)
+  // In a real implementation, this would go to a database
+  console.log("Voice Interaction:", fullLog)
 
   // Store in localStorage for demo purposes
-  const existing = JSON.parse(localStorage.getItem("tilo-voice-log") || "[]")
-  existing.push(interaction)
-  localStorage.setItem("tilo-voice-log", JSON.stringify(existing.slice(-100))) // Keep last 100
+  const existingLogs = JSON.parse(localStorage.getItem("tilo-voice-logs") || "[]")
+  existingLogs.push(fullLog)
+  localStorage.setItem("tilo-voice-logs", JSON.stringify(existingLogs.slice(-100))) // Keep last 100
 }

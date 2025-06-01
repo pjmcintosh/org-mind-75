@@ -11,11 +11,6 @@ import { getAgentGroupStorageKey } from "@/config/sidebar-config"
 import { entityTypes } from "@/lib/constants/entityTypes"
 import TiloAvatar from "@/components/tilo/TiloAvatar"
 
-// Add this new style
-const shadowGlowStyle = {
-  "shadow-glow-cyan": "box-shadow: 0 0 8px 2px rgba(34, 211, 238, 0.4)",
-}
-
 interface SidebarAgentGroupProps {
   agentGroup: SidebarAgentGroupType
   parentGroupKey: string
@@ -68,7 +63,7 @@ function SidebarAgentItem({
     <Link href={item.path}>
       <div
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200 relative",
+          "flex items-center gap-4 rounded-lg px-3 py-3 text-sm transition-all duration-200 relative",
           // Active state styling - matches other sidebar items
           isActive
             ? "bg-cyan-500/10 text-white font-semibold border-l-2 border-cyan-400 ml-2"
@@ -79,11 +74,9 @@ function SidebarAgentItem({
         title={item.description}
       >
         {/* Agent Avatar or Entity Icon */}
-        <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative">
+        <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative">
           {isTilo ? (
-            <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-slate-700 relative">
-              <TiloAvatar state="idle" size="md" className="border-2 border-cyan-400 shadow-glow-cyan" />
-            </div>
+            <TiloAvatar state="idle" size="md" />
           ) : avatarPath ? (
             <img
               src={avatarPath || "/placeholder.svg"}
@@ -145,7 +138,7 @@ function SidebarAgentItem({
               </span>
             )}
           </div>
-          {item.description && (
+          {item.description && !isTilo && (
             <div
               className={cn("text-xs leading-tight mt-0.5 truncate", isActive ? "text-blue-200" : "text-slate-400")}
               title={item.description}
