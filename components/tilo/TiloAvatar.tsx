@@ -32,41 +32,82 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
     // Only change if different from current
     if (videoSrc !== currentVideo) {
       setCurrentVideo(videoSrc)
+      setVideoLoaded(false)
+      setFallbackActive(false)
 
       if (videoRef.current) {
-        videoRef.current.src = videoSrc
-        videoRef.current.load()
+        const video = videoRef.current
 
-        // Play when loaded
-        videoRef.current.onloadeddata = () => {
+        // Clear previous event handlers
+        video.onloadeddata = null
+        video.onerror = null
+        video.oncanplay = null
+
+        // Set up new event handlers
+        video.onloadeddata = () => {
+          console.log(`Tilo video loaded: ${videoSrc}`)
           setVideoLoaded(true)
           setFallbackActive(false)
-          videoRef.current?.play().catch((err) => {
+          video.play().catch((err) => {
             console.error("Error playing Tilo animation:", err)
             setFallbackActive(true)
           })
         }
 
-        // Handle errors
-        videoRef.current.onerror = (e) => {
-          console.error("Error loading Tilo animation:", e)
+        video.oncanplay = () => {
+          console.log(`Tilo video can play: ${videoSrc}`)
+          if (!videoLoaded) {
+            setVideoLoaded(true)
+            setFallbackActive(false)
+          }
+        }
+
+        // Handle errors with better logging
+        video.onerror = (e) => {
+          console.error("Error loading Tilo animation:", {
+            src: videoSrc,
+            error: e,
+            videoError: video.error,
+            networkState: video.networkState,
+            readyState: video.readyState,
+          })
           setVideoLoaded(false)
           setFallbackActive(true)
         }
+
+        // Set source and load
+        video.src = videoSrc
+        video.load()
       }
     }
-  }, [state, currentVideo])
+  }, [state, currentVideo, videoLoaded])
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (videoRef.current) {
+        const video = videoRef.current
+        video.onloadeddata = null
+        video.onerror = null
+        video.oncanplay = null
+        video.pause()
+      }
+    }
+  }, [])
 
   return (
     <div className={`relative rounded-full overflow-hidden bg-cyan-900/30 ${sizeClasses[size]} ${className}`}>
       {/* Video element */}
       <video
         ref={videoRef}
-        className={`w-full h-full object-cover ${videoLoaded && !fallbackActive ? "opacity-100" : "opacity-0"}`}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          videoLoaded && !fallbackActive ? "opacity-100" : "opacity-0"
+        }`}
         autoPlay
         muted
         loop
         playsInline
+        preload="metadata"
       />
 
       {/* Fallback image or animation when video fails */}
@@ -75,6 +116,11 @@ export default function TiloAvatar({ state = "idle", size = "md", className = ""
           <div className="w-3/4 h-3/4 rounded-full bg-cyan-400/80 animate-pulse flex items-center justify-center">
             <div className="w-1/2 h-1/2 rounded-full bg-cyan-200 animate-ping opacity-75"></div>
           </div>
+          {process.env.NODE_ENV === "development" && fallbackActive && (
+            <div className="absolute bottom-0 left-0 right-0 text-xs text-red-400 bg-black/50 p-1 text-center">
+              Video failed: {currentVideo}
+            </div>
+          )}
         </div>
       )}
     </div>
