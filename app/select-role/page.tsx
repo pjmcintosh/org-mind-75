@@ -1,16 +1,92 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useRole, AVAILABLE_ROLES, getRoleInfo } from "@/lib/context/role-context"
+import { useRole } from "@/lib/context/role-context"
 import { getCurrentUserRole, hasCompletedOnboarding } from "@/lib/auth"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import ClientTile from "@/components/select-role/ClientTile"
 import AdminTile from "@/components/select-role/AdminTile"
-import ClientSelectorCard from "@/components/select-role/ClientSelectorCard"
 import NewClientTile from "@/components/select-role/NewClientTile"
-import { Smartphone, ArrowRight, Volume2, MessageCircle } from "lucide-react"
+import { Smartphone, ArrowRight, Volume2, MessageCircle, User, Shield, Crown, UserPlus, Eye } from "lucide-react"
+import { setUserRole } from "@/lib/auth/setUserRole"
+
+// Define role options with personas
+const roleOptions = [
+  {
+    label: "Admin (Tom Edmonds)",
+    value: "admin",
+    icon: Shield,
+    description: "Full system access and client impersonation",
+    persona: "Tom Edmonds - System Administrator",
+  },
+  {
+    label: "CEO (Joe McIntosh)",
+    value: "ceo",
+    icon: Crown,
+    description: "Executive dashboard and approvals",
+    persona: "Joe McIntosh - Chief Executive Officer",
+  },
+  {
+    label: "Mobile CEO",
+    value: "mobile ceo", // Exact match for middleware
+    icon: Smartphone,
+    description: "Mobile executive experience",
+    persona: "Joe McIntosh - Mobile CEO Experience",
+  },
+  {
+    label: "New Client (TBD)",
+    value: "new client",
+    icon: UserPlus,
+    description: "First-time client onboarding",
+    persona: "New client going through intake process",
+  },
+  {
+    label: "Existing Client",
+    value: "client",
+    icon: User,
+    description: "Established client with projects",
+    persona: "Select from existing client users below",
+  },
+]
+
+// Define client users for simulation
+const clientUsers = [
+  {
+    label: "Sarah Johnson",
+    value: "sarah",
+    company: "TechCorp Solutions",
+    projects: 3,
+    status: "Active",
+    lastLogin: "2 hours ago",
+  },
+  {
+    label: "Jake Clark",
+    value: "jake",
+    company: "Innovation Labs",
+    projects: 1,
+    status: "Active",
+    lastLogin: "1 day ago",
+  },
+  {
+    label: "Robert Nash",
+    value: "robert",
+    company: "Global Dynamics",
+    projects: 5,
+    status: "Premium",
+    lastLogin: "30 minutes ago",
+  },
+  {
+    label: "Jen Smith",
+    value: "jen",
+    company: "StartupX",
+    projects: 2,
+    status: "Active",
+    lastLogin: "3 days ago",
+  },
+]
 
 // Role-based redirect logic
 function useRoleBasedRedirect() {
@@ -27,14 +103,13 @@ function useRoleBasedRedirect() {
 
       switch (normalizedRole) {
         case "admin":
-        case "internal staff":
           destination = "/admin/dashboard"
           break
         case "ceo":
           destination = "/admin/ceo"
           break
         case "mobile ceo":
-          destination = "/admin/ceo" // Mobile CEO goes to same dashboard as CEO
+          destination = "/admin/ask-tilo/desktop" // Direct to mobile experience
           break
         case "client":
           destination = "/client/dashboard"
@@ -49,72 +124,244 @@ function useRoleBasedRedirect() {
 
       console.log(`Redirected: ${currentRole} → ${destination}`)
       router.push(destination)
-    } else if (currentRole && !onboardingComplete) {
-      console.log(`Role detected (${currentRole}) but onboarding incomplete - showing role selection`)
-    } else {
-      console.log("No role detected - showing role selection interface")
     }
   }, [router])
 }
 
-// Role Switcher Component (Development Only)
-function RoleSwitcher() {
+// Role and User Selector Component
+function RoleUserSelector() {
   const { currentRole, setRole } = useRole()
+  const [selectedUser, setSelectedUser] = useState<string>("")
+  const [impersonatedUser, setImpersonatedUser] = useState<string>("")
+  const [cookieRole, setCookieRole] = useState<string>("unknown")
+
+  useEffect(() => {
+    // Load saved selections and cookie status
+    if (typeof window !== "undefined") {
+      const savedUser = localStorage.getItem("tilo-user")
+      const savedImpersonation = localStorage.getItem("impersonated-user")
+
+      // Check cookie status
+      const cookieMatch = document.cookie.match(/ephrya-user-role=([^;]+)/)
+      const currentCookieRole = cookieMatch?.[1] || "not set"
+
+      if (savedUser) {
+        setSelectedUser(savedUser)
+      }
+      if (savedImpersonation) {
+        setImpersonatedUser(savedImpersonation)
+      }
+
+      setCookieRole(currentCookieRole)
+    }
+  }, [])
 
   const handleRoleChange = (newRole: string) => {
     console.log(`🎭 Selected role: ${newRole}`)
     const normalizedRole = newRole.toLowerCase()
+
+    // Update context
     setRole(normalizedRole as any)
 
-    // Set role in ALL possible storage locations
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tilo-current-role", normalizedRole)
-      localStorage.setItem("tilo-test-role", normalizedRole)
-      localStorage.setItem("ephrya-user-role", normalizedRole)
+    // Set role in both localStorage and cookies
+    setUserRole(normalizedRole)
 
-      // Set cookie that middleware can read
-      document.cookie = `ephrya-user-role=${normalizedRole}; path=/; max-age=86400`
+    // Update cookie status display
+    const cookieMatch = document.cookie.match(/ephrya-user-role=([^;]+)/)
+    setCookieRole(cookieMatch?.[1] || "not set")
 
-      // Set mobile demo flag for mobile CEO
-      if (normalizedRole === "mobile ceo") {
-        localStorage.setItem("tilo-mobile-demo", "true")
-      } else {
-        localStorage.removeItem("tilo-mobile-demo")
-      }
+    // Clear user selection if switching away from client
+    if (normalizedRole !== "client") {
+      localStorage.removeItem("tilo-user")
+      setSelectedUser("")
+    }
+
+    // Clear impersonation if switching away from admin
+    if (normalizedRole !== "admin") {
+      localStorage.removeItem("impersonated-user")
+      setImpersonatedUser("")
     }
 
     console.log(`✅ Role set to ${normalizedRole}`)
   }
 
+  const handleUserChange = (userId: string) => {
+    setSelectedUser(userId)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tilo-user", userId)
+      console.log(`👤 User set to ${userId}`)
+    }
+  }
+
+  const handleImpersonationChange = (userId: string) => {
+    setImpersonatedUser(userId)
+    if (typeof window !== "undefined") {
+      if (userId) {
+        localStorage.setItem("impersonated-user", userId)
+        // Also set cookie for middleware
+        document.cookie = `impersonated-user=${userId}; path=/; SameSite=Lax; max-age=86400`
+        console.log(`👁️ Admin impersonating: ${userId}`)
+      } else {
+        localStorage.removeItem("impersonated-user")
+        document.cookie = "impersonated-user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+        console.log(`👁️ Admin stopped impersonating`)
+      }
+    }
+  }
+
+  const selectedRoleOption = roleOptions.find((option) => option.value === currentRole)
+  const selectedUserData = clientUsers.find((user) => user.value === selectedUser)
+  const impersonatedUserData = clientUsers.find((user) => user.value === impersonatedUser)
+  const isAdmin = currentRole === "admin"
+
   return (
     <Card className="mb-8 bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm rounded-xl">
       <CardContent className="p-6">
-        <div className="flex items-center justify-between">
+        <div className="space-y-6">
+          {/* Header */}
           <div>
-            <h3 className="font-semibold text-cyan-400">Development Role Switcher</h3>
-            <p className="text-sm text-blue-300">Switch between roles to test different access levels</p>
+            <h3 className="font-semibold text-cyan-400 mb-2">Role & User Simulation</h3>
+            <p className="text-sm text-blue-300">
+              Select a role and user persona to test different access levels and workflows
+            </p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-white">Current Role:</span>
+
+          {/* Role Selection */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-white">Select Role:</label>
             <Select value={currentRole} onValueChange={handleRoleChange}>
-              <SelectTrigger className="w-40 bg-slate-800/50 border-slate-600 text-white">
-                <SelectValue />
+              <SelectTrigger className="w-full bg-slate-800/50 border-slate-600 text-white">
+                <SelectValue placeholder="Choose a role..." />
               </SelectTrigger>
               <SelectContent className="bg-slate-800 border-slate-600">
-                {AVAILABLE_ROLES.map((role) => {
-                  const info = getRoleInfo(role)
+                {roleOptions.map((option) => {
+                  const Icon = option.icon
                   return (
-                    <SelectItem key={role} value={role} className="text-white hover:bg-slate-700">
-                      <span className="flex items-center gap-2">
-                        {info.icon}
-                        <span>{role}</span>
-                      </span>
+                    <SelectItem key={option.value} value={option.value} className="text-white hover:bg-slate-700">
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4" />
+                        <div>
+                          <div className="font-medium">{option.label}</div>
+                          <div className="text-xs text-slate-400">{option.description}</div>
+                        </div>
+                      </div>
                     </SelectItem>
                   )
                 })}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Selected Role Info */}
+          {selectedRoleOption && (
+            <div className="p-3 bg-slate-800/30 rounded-lg border border-slate-600">
+              <div className="flex items-center gap-2 mb-1">
+                <selectedRoleOption.icon className="w-4 h-4 text-cyan-400" />
+                <span className="font-medium text-cyan-400">Selected Role</span>
+              </div>
+              <p className="text-sm text-slate-300">{selectedRoleOption.persona}</p>
+              <div className="mt-2 text-xs flex items-center gap-2">
+                <span className="text-slate-400">Cookie:</span>
+                <Badge variant={cookieRole !== "not set" ? "outline" : "destructive"} className="text-xs">
+                  {cookieRole}
+                </Badge>
+              </div>
+            </div>
+          )}
+
+          {/* Admin Impersonation */}
+          {isAdmin && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-orange-400" />
+                <label className="text-sm font-medium text-white">Admin Impersonation:</label>
+                <Badge variant="outline" className="text-orange-400 border-orange-400">
+                  Testing Mode
+                </Badge>
+              </div>
+              <Select value={impersonatedUser} onValueChange={handleImpersonationChange}>
+                <SelectTrigger className="w-full bg-slate-800/50 border-slate-600 text-white">
+                  <SelectValue placeholder="Select a client to impersonate..." />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  <SelectItem value="" className="text-white hover:bg-slate-700">
+                    <span className="text-slate-400">No impersonation</span>
+                  </SelectItem>
+                  {clientUsers.map((user) => (
+                    <SelectItem key={user.value} value={user.value} className="text-white hover:bg-slate-700">
+                      <div>
+                        <div className="font-medium">{user.label}</div>
+                        <div className="text-xs text-slate-400">
+                          {user.company} • {user.projects} projects • Last login: {user.lastLogin}
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Impersonation Info */}
+              {impersonatedUserData && (
+                <div className="p-3 bg-orange-900/20 rounded-lg border border-orange-500/30">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Eye className="w-4 h-4 text-orange-400" />
+                    <span className="font-medium text-orange-400">Impersonating Client</span>
+                  </div>
+                  <div className="text-sm text-orange-200">
+                    <div className="font-medium">{impersonatedUserData.label}</div>
+                    <div className="text-xs text-orange-300">
+                      {impersonatedUserData.company} • {impersonatedUserData.projects} active projects •{" "}
+                      {impersonatedUserData.status} status
+                    </div>
+                  </div>
+                  <div className="mt-2 text-xs text-orange-300 bg-orange-900/30 p-2 rounded">
+                    ⚠️ You are viewing as this client. All actions will be read-only for testing purposes.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Client User Selection (for non-admin roles) */}
+          {currentRole === "client" && !isAdmin && (
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-white">Select Client User:</label>
+              <Select value={selectedUser} onValueChange={handleUserChange}>
+                <SelectTrigger className="w-full bg-slate-800/50 border-slate-600 text-white">
+                  <SelectValue placeholder="Choose a client user..." />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  {clientUsers.map((user) => (
+                    <SelectItem key={user.value} value={user.value} className="text-white hover:bg-slate-700">
+                      <div>
+                        <div className="font-medium">{user.label}</div>
+                        <div className="text-xs text-slate-400">
+                          {user.company} • {user.projects} projects • {user.status}
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Selected User Info */}
+              {selectedUserData && (
+                <div className="p-3 bg-slate-800/30 rounded-lg border border-slate-600">
+                  <div className="flex items-center gap-2 mb-1">
+                    <User className="w-4 h-4 text-green-400" />
+                    <span className="font-medium text-green-400">Selected User</span>
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    <div className="font-medium">{selectedUserData.label}</div>
+                    <div className="text-xs text-slate-400">
+                      {selectedUserData.company} • {selectedUserData.projects} active projects •{" "}
+                      {selectedUserData.status} status
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -124,6 +371,17 @@ function RoleSwitcher() {
 export default function SelectRolePage() {
   const { currentRole } = useRole()
   const router = useRouter()
+  const [impersonatedUser, setImpersonatedUser] = useState<string>("")
+
+  // Load impersonation state
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedImpersonation = localStorage.getItem("impersonated-user")
+      if (savedImpersonation) {
+        setImpersonatedUser(savedImpersonation)
+      }
+    }
+  }, [])
 
   // Apply role-based redirect logic
   useRoleBasedRedirect()
@@ -132,14 +390,15 @@ export default function SelectRolePage() {
 
   // Normalize role for comparisons
   const normalizedRole = currentRole.toLowerCase()
+  const isAdmin = normalizedRole === "admin"
+  const hasImpersonation = isAdmin && impersonatedUser
 
   // Determine which tiles to show based on role
+  const showAdminDashboard = isAdmin && !hasImpersonation
+  const showCEODashboard = normalizedRole === "ceo"
+  const showDemoMobileCEO = normalizedRole === "mobile ceo"
   const showNewClientTile = normalizedRole === "new client"
-  const showClientTile = normalizedRole === "client"
-  const showAdminClientSelector = normalizedRole === "admin"
-  const showAdminTile =
-    normalizedRole !== "client" && normalizedRole !== "new client" && normalizedRole !== "mobile ceo"
-  const showMobileCEOTile = normalizedRole === "mobile ceo"
+  const showClientDashboardAccess = normalizedRole === "client" || hasImpersonation
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b1323] to-[#101d34] flex items-center justify-center p-4">
@@ -155,59 +414,63 @@ export default function SelectRolePage() {
           </CardContent>
         </Card>
 
-        {/* Role Switcher (Development) */}
-        <RoleSwitcher />
+        {/* Role and User Selector */}
+        <RoleUserSelector />
 
         {/* Header */}
         <div className="text-center mb-12">
           <p className="text-lg md:text-xl text-blue-300 max-w-2xl mx-auto">
             {showNewClientTile
               ? "Let's get started with your first AI project"
-              : "Choose your role to access the appropriate dashboard and tools"}
+              : hasImpersonation
+                ? `Testing client experience as ${clientUsers.find((u) => u.value === impersonatedUser)?.label}`
+                : "Access your role-specific dashboard and tools"}
           </p>
         </div>
 
         {/* Dynamic Role-Based Dashboard Tiles */}
         <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-          {/* New Client Onboarding Tile - Show for New Clients only */}
-          {showNewClientTile && (
-            <div className="md:col-span-2 max-w-lg mx-auto">
-              <NewClientTile className="bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm text-white p-6 rounded-xl" />
-            </div>
-          )}
-
-          {/* Client Dashboard Tile - Show for Clients only */}
-          {showClientTile && (
-            <ClientTile className="bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm text-white p-6 rounded-xl" />
-          )}
-
-          {/* Admin Client Selector - Show for Admins only */}
-          {showAdminClientSelector && (
-            <ClientSelectorCard className="bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm text-white p-6 rounded-xl" />
-          )}
-
-          {/* Admin Dashboard Tile - Show for all non-Client roles */}
-          {showAdminTile && (
+          {/* Admin Dashboard - Show for Admin only (when not impersonating) */}
+          {showAdminDashboard && (
             <AdminTile className="bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm text-white p-6 rounded-xl" />
           )}
 
-          {/* Demo Mobile CEO Tile - Show ONLY for Mobile CEO role */}
-          {showMobileCEOTile && (
+          {/* CEO Dashboard - Show for CEO only */}
+          {showCEODashboard && (
+            <div className="md:col-span-2 max-w-lg mx-auto">
+              <Card
+                className="bg-gradient-to-br from-blue-900/80 to-indigo-900/80 border border-blue-500/20 backdrop-blur-sm text-white p-6 rounded-xl cursor-pointer hover:from-blue-800/80 hover:to-indigo-800/80 transition-all duration-200"
+                onClick={() => router.push("/admin/ceo")}
+              >
+                <CardContent className="p-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <Crown className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-blue-200">CEO Dashboard</h3>
+                        <span className="text-sm text-blue-300">Executive Overview</span>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <p className="text-blue-300 text-sm">
+                    Access executive briefings, approval queues, and strategic oversight tools.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Demo Mobile CEO - Show for Mobile CEO only */}
+          {showDemoMobileCEO && (
             <div className="md:col-span-2 max-w-lg mx-auto">
               <Card
                 className="bg-gradient-to-br from-purple-900/80 to-indigo-900/80 border border-purple-500/20 backdrop-blur-sm text-white p-6 rounded-xl cursor-pointer hover:from-purple-800/80 hover:to-indigo-800/80 transition-all duration-200"
                 onClick={() => {
-                  console.log("🚀 Mobile CEO tile clicked - redirecting to Tilo")
-
-                  // Ensure role is set properly before redirect
-                  if (typeof window !== "undefined") {
-                    localStorage.setItem("tilo-current-role", "mobile ceo")
-                    localStorage.setItem("ephrya-user-role", "mobile ceo")
-                    localStorage.setItem("tilo-mobile-demo", "true")
-                    document.cookie = "ephrya-user-role=mobile ceo; path=/; max-age=86400"
-                  }
-
-                  // Direct redirect to Tilo desktop
+                  // Ensure cookie is set before redirect
+                  setUserRole("mobile ceo")
                   router.push("/admin/ask-tilo/desktop")
                 }}
               >
@@ -242,21 +505,53 @@ export default function SelectRolePage() {
               </Card>
             </div>
           )}
+
+          {/* New Client Onboarding - Show for New Clients only */}
+          {showNewClientTile && (
+            <div className="md:col-span-2 max-w-lg mx-auto">
+              <NewClientTile className="bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm text-white p-6 rounded-xl" />
+            </div>
+          )}
+
+          {/* Client Dashboard Access - Show for Existing Clients or Admin Impersonation */}
+          {showClientDashboardAccess && (
+            <div className="relative">
+              {hasImpersonation && (
+                <div className="absolute -top-2 -right-2 z-10">
+                  <Badge className="bg-orange-500 text-white">
+                    <Eye className="w-3 h-3 mr-1" />
+                    Admin View
+                  </Badge>
+                </div>
+              )}
+              <ClientTile className="bg-[#0f1a2c]/80 border border-cyan-500/20 backdrop-blur-sm text-white p-6 rounded-xl" />
+            </div>
+          )}
         </div>
 
         {/* Debug Info */}
         <div className="mt-8 p-4 bg-slate-800/50 rounded-lg text-xs text-slate-400">
           <h4 className="font-semibold mb-2">Debug Info:</h4>
-          <div>Current Role: {currentRole}</div>
-          <div>
-            localStorage (tilo-current-role):{" "}
-            {typeof window !== "undefined" ? localStorage.getItem("tilo-current-role") : "N/A"}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <strong>Role (localStorage):</strong>{" "}
+              {typeof window !== "undefined" ? localStorage.getItem("tilo-current-role") : "N/A"}
+            </div>
+            <div>
+              <strong>Role (cookie):</strong>{" "}
+              {typeof document !== "undefined"
+                ? document.cookie.match(/ephrya-user-role=([^;]+)/)?.[1] || "not set"
+                : "N/A"}
+            </div>
+            <div>
+              <strong>Impersonation:</strong>{" "}
+              {typeof window !== "undefined" ? localStorage.getItem("impersonated-user") || "none" : "N/A"}
+            </div>
+            <div>
+              <strong>Mobile Demo:</strong>{" "}
+              {typeof window !== "undefined" ? localStorage.getItem("tilo-mobile-demo") || "false" : "N/A"}
+            </div>
           </div>
-          <div>
-            localStorage (ephrya-user-role):{" "}
-            {typeof window !== "undefined" ? localStorage.getItem("ephrya-user-role") : "N/A"}
-          </div>
-          <div>Cookie: {typeof document !== "undefined" ? document.cookie : "N/A"}</div>
         </div>
 
         {/* Footer */}
@@ -273,4 +568,4 @@ export default function SelectRolePage() {
   )
 }
 
-console.log("Loaded: SelectRolePage with case-insensitive redirect logic")
+console.log("Loaded: SelectRolePage with cookie-based role storage for middleware")

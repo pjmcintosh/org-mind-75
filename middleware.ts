@@ -10,6 +10,14 @@ export function middleware(request: NextRequest) {
 
   console.log(`🔍 Middleware: ${pathname} accessed by role: ${normalizedRole}`)
 
+  // Check for admin impersonation
+  const impersonatedUser = request.cookies.get("impersonated-user")?.value
+  const isImpersonating = normalizedRole === "admin" && impersonatedUser
+
+  if (isImpersonating) {
+    console.log(`👁️ Middleware: Admin impersonating user: ${impersonatedUser}`)
+  }
+
   // ALWAYS allow these paths - no restrictions
   const alwaysAllowedPaths = ["/unauthorized", "/select-role", "/", "/login"]
 
@@ -41,10 +49,16 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Client routes
+  // Client routes - Allow clients, admins, and admin impersonation
   if (pathname.startsWith("/client")) {
-    if (["client", "new client", "admin", "ceo"].includes(effectiveRole)) {
-      console.log(`✅ Middleware: Allowing ${normalizedRole} access to client route: ${pathname}`)
+    const allowClientAccess = ["client", "new client", "admin", "ceo"].includes(effectiveRole) || isImpersonating
+
+    if (allowClientAccess) {
+      if (isImpersonating) {
+        console.log(`✅ Middleware: Allowing admin impersonation access to client route: ${pathname}`)
+      } else {
+        console.log(`✅ Middleware: Allowing ${normalizedRole} access to client route: ${pathname}`)
+      }
       return NextResponse.next()
     } else {
       console.log(`❌ Middleware: Blocking ${normalizedRole} from client route: ${pathname}`)

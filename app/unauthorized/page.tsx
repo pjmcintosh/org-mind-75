@@ -10,6 +10,7 @@ export default function UnauthorizedPage() {
   const router = useRouter()
   const [userRole, setUserRole] = useState<string>("unknown")
   const [currentPath, setCurrentPath] = useState<string>("")
+  const [cookieRole, setCookieRole] = useState<string>("unknown")
 
   useEffect(() => {
     // Only access window/localStorage on the client side
@@ -20,7 +21,12 @@ export default function UnauthorizedPage() {
         localStorage.getItem("ephrya-user-role") ||
         localStorage.getItem("tilo-test-role")
 
+      // Get role from cookie (what middleware sees)
+      const cookieMatch = document.cookie.match(/ephrya-user-role=([^;]+)/)
+      const roleFromCookie = cookieMatch?.[1] || "not set"
+
       setUserRole(roleFromStorage || "unknown")
+      setCookieRole(roleFromCookie)
       setCurrentPath(window.location.pathname)
     }
   }, [])
@@ -79,14 +85,19 @@ export default function UnauthorizedPage() {
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-600">
-            <p className="text-xs text-slate-500">
-              Detected role: <span className="text-slate-400 font-mono">{userRole}</span>
-            </p>
-            {currentPath && (
-              <p className="text-xs text-slate-500 mt-1">
-                Current path: <span className="text-slate-400 font-mono">{currentPath}</span>
+            <div className="text-xs text-slate-500 space-y-1">
+              <p>
+                Detected role (localStorage): <span className="text-slate-400 font-mono">{userRole}</span>
               </p>
-            )}
+              <p>
+                Detected role (cookie): <span className="text-slate-400 font-mono">{cookieRole}</span>
+              </p>
+              {currentPath && (
+                <p>
+                  Current path: <span className="text-slate-400 font-mono">{currentPath}</span>
+                </p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
