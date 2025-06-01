@@ -32,16 +32,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Mobile CEO gets CEO privileges - treat as CEO for ALL purposes
-  const effectiveRole = normalizedRole === "mobile ceo" ? "ceo" : normalizedRole
-  console.log(`🎭 Middleware: Effective role for ${normalizedRole} is ${effectiveRole}`)
-
-  // CEO and Mobile CEO get access to EVERYTHING in admin
+  // CEO gets access to EVERYTHING in admin (no more special mobile ceo handling)
   if (pathname.startsWith("/admin")) {
-    if (effectiveRole === "ceo" || effectiveRole === "admin") {
-      console.log(
-        `✅ Middleware: Allowing ${normalizedRole} (effective: ${effectiveRole}) access to admin route: ${pathname}`,
-      )
+    if (normalizedRole === "ceo" || normalizedRole === "admin") {
+      console.log(`✅ Middleware: Allowing ${normalizedRole} access to admin route: ${pathname}`)
       return NextResponse.next()
     } else {
       console.log(`❌ Middleware: Blocking ${normalizedRole} from admin route: ${pathname}`)
@@ -51,7 +45,7 @@ export function middleware(request: NextRequest) {
 
   // Client routes - Allow clients, admins, and admin impersonation
   if (pathname.startsWith("/client")) {
-    const allowClientAccess = ["client", "new client", "admin", "ceo"].includes(effectiveRole) || isImpersonating
+    const allowClientAccess = ["client", "new client", "admin", "ceo"].includes(normalizedRole) || isImpersonating
 
     if (allowClientAccess) {
       if (isImpersonating) {

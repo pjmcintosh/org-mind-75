@@ -3,17 +3,7 @@
 import { getCurrentUserRole } from "@/lib/auth"
 
 // Define role types
-export type Role =
-  | "admin"
-  | "ceo"
-  | "client"
-  | "new client"
-  | "analyst"
-  | "developer"
-  | "hr"
-  | "finance"
-  | "legal"
-  | "mobile ceo"
+export type Role = "admin" | "ceo" | "client" | "new client" | "analyst" | "developer" | "hr" | "finance" | "legal"
 
 // Define feature access types
 export type TiloFeature = "basic" | "advanced" | "admin" | "ceo" | "mobile"
@@ -22,25 +12,24 @@ export type TiloFeature = "basic" | "advanced" | "admin" | "ceo" | "mobile"
 export function canUseTiloFeature(role: Role, feature: TiloFeature): boolean {
   const normalizedRole = role.toLowerCase() as Role
 
-  // Treat mobile CEO as equivalent to CEO for permissions
-  const effectiveRole = normalizedRole === "mobile ceo" ? "ceo" : normalizedRole
-
   switch (feature) {
     case "basic":
       // All roles can access basic features
       return true
     case "advanced":
-      // Admin, CEO, and mobile CEO can access advanced features
-      return ["admin", "ceo"].includes(effectiveRole)
+      // Admin and CEO can access advanced features
+      return ["admin", "ceo"].includes(normalizedRole)
     case "admin":
       // Only admin can access admin features
-      return effectiveRole === "admin"
+      return normalizedRole === "admin"
     case "ceo":
-      // Only CEO and mobile CEO can access CEO features
-      return effectiveRole === "ceo"
+      // Only CEO can access CEO features
+      return normalizedRole === "ceo"
     case "mobile":
-      // Only mobile CEO can access mobile-specific features
-      return normalizedRole === "mobile ceo"
+      // Check for mobile demo flag instead of role
+      return (
+        normalizedRole === "ceo" && typeof window !== "undefined" && localStorage.getItem("tilo-mobile-demo") === "true"
+      )
     default:
       return false
   }
@@ -111,13 +100,6 @@ export function forceSetRole(role: Role): void {
 
   // Set in cookie
   document.cookie = `ephrya-user-role=${normalizedRole}; path=/; max-age=86400`
-
-  // Set mobile demo flag for mobile CEO
-  if (normalizedRole === "mobile ceo") {
-    localStorage.setItem("tilo-mobile-demo", "true")
-  } else {
-    localStorage.removeItem("tilo-mobile-demo")
-  }
 
   console.log(`Force set role to ${normalizedRole} in all storage mechanisms`)
 }
