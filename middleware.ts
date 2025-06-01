@@ -8,66 +8,52 @@ export function middleware(request: NextRequest) {
   const role = request.cookies.get("ephrya-user-role")?.value || "admin"
   const normalizedRole = role.toLowerCase()
 
-  console.log(`Middleware: ${pathname} accessed by role: ${normalizedRole}`)
+  console.log(`🔍 Middleware: ${pathname} accessed by role: ${normalizedRole}`)
 
-  // Treat mobile CEO as regular CEO for access control
+  // ALWAYS allow these paths - no restrictions
+  const alwaysAllowedPaths = ["/unauthorized", "/select-role", "/", "/login"]
+
+  if (alwaysAllowedPaths.some((path) => pathname === path)) {
+    console.log(`✅ Middleware: Always allowing access to ${pathname}`)
+    return NextResponse.next()
+  }
+
+  // ALWAYS allow ALL Tilo routes for ANY role - completely unrestricted
+  if (pathname.includes("ask-tilo") || pathname.includes("tilo")) {
+    console.log(`✅ Middleware: Allowing ALL users access to Tilo route: ${pathname}`)
+    return NextResponse.next()
+  }
+
+  // Mobile CEO gets CEO privileges - treat as CEO for ALL purposes
   const effectiveRole = normalizedRole === "mobile ceo" ? "ceo" : normalizedRole
-  console.log(`Middleware: Effective role for access control: ${effectiveRole}`)
+  console.log(`🎭 Middleware: Effective role for ${normalizedRole} is ${effectiveRole}`)
 
-  // CEO Dashboard access - Allow both CEO and Admin
-  if (pathname.startsWith("/admin/ceo")) {
-    if (effectiveRole !== "ceo" && effectiveRole !== "admin") {
-      console.log(`Middleware: Blocking ${normalizedRole} from CEO dashboard`)
-      return NextResponse.redirect(new URL("/unauthorized", request.url))
-    }
-    console.log(`Middleware: Allowing ${normalizedRole} access to CEO dashboard`)
-    return NextResponse.next()
-  }
-
-  // Special case: Allow clients and mobile CEO to access Ask Tilo Desktop
-  if (pathname === "/admin/ask-tilo/desktop" || pathname === "/admin/ask-tilo/mobile") {
-    console.log(`Middleware: Allowing ${normalizedRole} access to Ask Tilo`)
-    return NextResponse.next()
-  }
-
-  // Mobile Tilo route - Allow CEO and mobile CEO specifically
-  if (pathname.startsWith("/ask-tilo/mobile")) {
-    if (effectiveRole !== "ceo" && effectiveRole !== "admin") {
-      console.log(`Middleware: Blocking ${normalizedRole} from mobile Tilo routes`)
-      return NextResponse.redirect(new URL("/unauthorized", request.url))
-    }
-    console.log(`Middleware: Allowing ${normalizedRole} access to mobile Tilo`)
-    return NextResponse.next()
-  }
-
-  // Admin routes - Allow admin and CEO
+  // CEO and Mobile CEO get access to EVERYTHING in admin
   if (pathname.startsWith("/admin")) {
-    if (!["admin", "ceo", "developer", "analyst"].includes(effectiveRole)) {
-      console.log(`Middleware: Blocking ${normalizedRole} from admin routes`)
+    if (effectiveRole === "ceo" || effectiveRole === "admin") {
+      console.log(
+        `✅ Middleware: Allowing ${normalizedRole} (effective: ${effectiveRole}) access to admin route: ${pathname}`,
+      )
+      return NextResponse.next()
+    } else {
+      console.log(`❌ Middleware: Blocking ${normalizedRole} from admin route: ${pathname}`)
       return NextResponse.redirect(new URL("/unauthorized", request.url))
     }
-    return NextResponse.next()
   }
 
   // Client routes
   if (pathname.startsWith("/client")) {
-    if (!["client", "new client", "admin", "ceo"].includes(effectiveRole)) {
-      console.log(`Middleware: Blocking ${normalizedRole} from client routes`)
+    if (["client", "new client", "admin", "ceo"].includes(effectiveRole)) {
+      console.log(`✅ Middleware: Allowing ${normalizedRole} access to client route: ${pathname}`)
+      return NextResponse.next()
+    } else {
+      console.log(`❌ Middleware: Blocking ${normalizedRole} from client route: ${pathname}`)
       return NextResponse.redirect(new URL("/unauthorized", request.url))
     }
-    return NextResponse.next()
   }
 
-  // Tilo routes - Allow clients to access Tilo with restrictions
-  if (pathname.startsWith("/ask-tilo")) {
-    if (!["client", "new client", "admin", "ceo"].includes(effectiveRole)) {
-      console.log(`Middleware: Blocking ${normalizedRole} from Tilo routes`)
-      return NextResponse.redirect(new URL("/unauthorized", request.url))
-    }
-    console.log(`Middleware: Allowing ${normalizedRole} access to Tilo`)
-    return NextResponse.next()
-  }
-
+  // Default: allow everything else
+  console.log(`✅ Middleware: Default allowing access to ${pathname}`)
   return NextResponse.next()
 }
 

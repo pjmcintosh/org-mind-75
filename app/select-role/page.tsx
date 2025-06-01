@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useRole, AVAILABLE_ROLES, getRoleInfo } from "@/lib/context/role-context"
-import { getCurrentUserRole, hasCompletedOnboarding, switchToRole } from "@/lib/auth"
+import { getCurrentUserRole, hasCompletedOnboarding } from "@/lib/auth"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import ClientTile from "@/components/select-role/ClientTile"
@@ -62,13 +62,28 @@ function RoleSwitcher() {
   const { currentRole, setRole } = useRole()
 
   const handleRoleChange = (newRole: string) => {
-    console.log(`Selected role: ${newRole}`)
+    console.log(`🎭 Selected role: ${newRole}`)
     const normalizedRole = newRole.toLowerCase()
     setRole(normalizedRole as any)
 
-    // Use the auth utility to properly set the role
-    switchToRole(normalizedRole as any)
-    console.log(`Role set to ${normalizedRole}`)
+    // Set role in ALL possible storage locations
+    if (typeof window !== "undefined") {
+      localStorage.setItem("tilo-current-role", normalizedRole)
+      localStorage.setItem("tilo-test-role", normalizedRole)
+      localStorage.setItem("ephrya-user-role", normalizedRole)
+
+      // Set cookie that middleware can read
+      document.cookie = `ephrya-user-role=${normalizedRole}; path=/; max-age=86400`
+
+      // Set mobile demo flag for mobile CEO
+      if (normalizedRole === "mobile ceo") {
+        localStorage.setItem("tilo-mobile-demo", "true")
+      } else {
+        localStorage.removeItem("tilo-mobile-demo")
+      }
+    }
+
+    console.log(`✅ Role set to ${normalizedRole}`)
   }
 
   return (
@@ -182,18 +197,17 @@ export default function SelectRolePage() {
               <Card
                 className="bg-gradient-to-br from-purple-900/80 to-indigo-900/80 border border-purple-500/20 backdrop-blur-sm text-white p-6 rounded-xl cursor-pointer hover:from-purple-800/80 hover:to-indigo-800/80 transition-all duration-200"
                 onClick={() => {
-                  // Set demo flags and redirect to mobile Tilo
+                  console.log("🚀 Mobile CEO tile clicked - redirecting to Tilo")
+
+                  // Ensure role is set properly before redirect
                   if (typeof window !== "undefined") {
-                    // Ensure we're recognized as CEO for permissions but keep mobile CEO for UI
                     localStorage.setItem("tilo-current-role", "mobile ceo")
-                    localStorage.setItem("tilo-test-role", "mobile ceo")
                     localStorage.setItem("ephrya-user-role", "mobile ceo")
                     localStorage.setItem("tilo-mobile-demo", "true")
-
-                    // Also set CEO cookie for middleware
                     document.cookie = "ephrya-user-role=mobile ceo; path=/; max-age=86400"
                   }
-                  // Redirect to ask-tilo desktop (which will handle mobile mode)
+
+                  // Direct redirect to Tilo desktop
                   router.push("/admin/ask-tilo/desktop")
                 }}
               >
@@ -228,6 +242,21 @@ export default function SelectRolePage() {
               </Card>
             </div>
           )}
+        </div>
+
+        {/* Debug Info */}
+        <div className="mt-8 p-4 bg-slate-800/50 rounded-lg text-xs text-slate-400">
+          <h4 className="font-semibold mb-2">Debug Info:</h4>
+          <div>Current Role: {currentRole}</div>
+          <div>
+            localStorage (tilo-current-role):{" "}
+            {typeof window !== "undefined" ? localStorage.getItem("tilo-current-role") : "N/A"}
+          </div>
+          <div>
+            localStorage (ephrya-user-role):{" "}
+            {typeof window !== "undefined" ? localStorage.getItem("ephrya-user-role") : "N/A"}
+          </div>
+          <div>Cookie: {typeof document !== "undefined" ? document.cookie : "N/A"}</div>
         </div>
 
         {/* Footer */}
