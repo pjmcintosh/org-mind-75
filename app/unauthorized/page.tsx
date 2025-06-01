@@ -9,15 +9,20 @@ import { ShieldX, ArrowLeft, Home } from "lucide-react"
 export default function UnauthorizedPage() {
   const router = useRouter()
   const [userRole, setUserRole] = useState<string>("unknown")
+  const [currentPath, setCurrentPath] = useState<string>("")
 
   useEffect(() => {
-    // Get role from multiple possible sources
-    const roleFromStorage =
-      localStorage.getItem("tilo-current-role") ||
-      localStorage.getItem("ephrya-user-role") ||
-      localStorage.getItem("tilo-test-role")
+    // Only access window/localStorage on the client side
+    if (typeof window !== "undefined") {
+      // Get role from multiple possible sources
+      const roleFromStorage =
+        localStorage.getItem("tilo-current-role") ||
+        localStorage.getItem("ephrya-user-role") ||
+        localStorage.getItem("tilo-test-role")
 
-    setUserRole(roleFromStorage || "unknown")
+      setUserRole(roleFromStorage || "unknown")
+      setCurrentPath(window.location.pathname)
+    }
   }, [])
 
   const handleGoBack = () => {
@@ -77,9 +82,11 @@ export default function UnauthorizedPage() {
             <p className="text-xs text-slate-500">
               Detected role: <span className="text-slate-400 font-mono">{userRole}</span>
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Current path: <span className="text-slate-400 font-mono">{window.location.pathname}</span>
-            </p>
+            {currentPath && (
+              <p className="text-xs text-slate-500 mt-1">
+                Current path: <span className="text-slate-400 font-mono">{currentPath}</span>
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
