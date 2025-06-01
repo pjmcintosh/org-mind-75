@@ -1,0 +1,32 @@
+export const signatureQueue = [
+  {
+    id: "sig-001",
+    documentName: "Q4 Strategic Plan",
+    requester: "Alice Johnson",
+    department: "Strategy",
+    priority: "high" as const,
+    dueDate: "2024-01-15",
+    status: "pending" as const,
+    description: "Annual strategic planning document requiring CEO approval",
+  },
+  {
+    id: "sig-002",
+    documentName: "Agent Deployment Protocol",
+    requester: "Bob Chen",
+    department: "Engineering",
+    priority: "medium" as const,
+    dueDate: "2024-01-20",
+    status: "pending" as const,
+    description: "New protocol for agent deployment and monitoring",
+  },
+  {
+    id: "sig-003",
+    documentName: "Compliance Framework Update",
+    requester: "Carol Davis",
+    department: "Legal",
+    priority: "high" as const,
+    dueDate: "2024-01-18",
+    status: "signed" as const,
+    description: "Updated compliance framework for AI agent operations",
+  },
+]

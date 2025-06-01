@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Z-index utilities for proper stacking */
+  .z-sidebar {
+    z-index: 40;
+  }
+
+  .z-orb {
+    z-index: 50;
+  }
+
+  .z-modal {
+    z-index: 60;
+  }
+
+  .z-tooltip {
+    z-index: 70;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  /* Ephrya Theme Variables */
+  .ephrya-theme {
+    --background: 11 19% 7%;
+    --foreground: 0 0% 98%;
+    --card: 15 26% 11%;
+    --card-foreground: 0 0% 98%;
+    --popover: 15 26% 11%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 188 100% 50%;
+    --primary-foreground: 11 19% 7%;
+    --secondary: 15 26% 11%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 15 26% 11%;
+    --muted-foreground: 210 40% 60%;
+    --accent: 188 100% 50%;
+    --accent-foreground: 11 19% 7%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 188 100% 50% / 0.2;
+    --input: 15 26% 11%;
+    --ring: 188 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Apply Ephrya theme to admin pages */
+  .admin-layout {
+    @apply ephrya-theme;
+  }
+}
+
+::selection {
+  background-color: transparent;
+}
+
+*::selection {
+  background-color: transparent;
+}
+
+/* Ephrya-specific component overrides */
+.ephrya-theme .bg-popover {
+  background: hsl(15 26% 11% / 0.95);
+  backdrop-filter: blur(8px);
+}
+
+.ephrya-theme .border-input {
+  border-color: hsl(188 100% 50% / 0.2);
+}
+
+.ephrya-theme .bg-background {
+  background: hsl(15 26% 11% / 0.8);
+}
+
+/* Ephrya Platform Specific Overrides */
+@layer components {
+  /* Ensure wiki pages don't get constrained by global layouts */
+  .wiki-page-override {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Admin layout adjustments for wiki */
+  .admin-layout .wiki-container {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  /* Responsive grid system */
+  .ephrya-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .ephrya-grid {
+      grid-template-columns: repeat(12, 1fr);
+    }
+  }
+
+  /* Cinematic background */
+  .ephrya-bg {
+    background: linear-gradient(135deg, #0b1323 0%, #101d34 100%);
+  }
+
+  /* Glassmorphic cards */
+  .ephrya-card {
+    background: rgba(15, 26, 44, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(6, 182, 212, 0.2);
+    box-shadow: 0 4px 6px rgba(6, 182, 212, 0.1);
+  }
+
+  /* Text hierarchy */
+  .ephrya-text-primary {
+    color: rgb(6, 182, 212); /* cyan-400 */
+  }
+
+  .ephrya-text-secondary {
+    color: rgb(147, 197, 253); /* blue-300 */
+  }
+
+  .ephrya-text-body {
+    color: rgb(255, 255, 255); /* white */
+  }
+
+  /* Layout spacing utilities */
+  .content-with-sidebar {
+    padding-left: 16rem; /* 256px - width of sidebar */
+  }
+
+  /* Responsive padding for content areas */
+  .content-padding {
+    padding: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .content-padding {
+      padding: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .content-padding {
+      padding: 2rem;
+    }
+  }
+
+  /* Orb spacing utilities */
+  .orb-margin {
+    margin-top: 5rem;
+    margin-right: 2rem;
+  }
+}
+
+/* Prevent layout conflicts */
+@layer utilities {
+  .no-layout-constraints {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .wiki-full-width {
+    width: 100vw !important;
+    margin-left: calc(-50vw + 50%) !important;
+  }
+
+  /* Ensure content doesn't overlap with sidebar */
+  .sidebar-aware {
+    margin-left: 16rem; /* 256px - width of sidebar */
+  }
+
+  /* Ensure content doesn't overlap with orb */
+  .orb-aware {
+    padding-top: 5rem;
+    padding-right: 5rem;
+  }
+}
