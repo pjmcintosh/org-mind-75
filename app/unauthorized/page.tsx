@@ -4,9 +4,33 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, ArrowLeft } from "lucide-react"
+import { useEffect, useState } from "react"
 
 export default function UnauthorizedPage() {
   const router = useRouter()
+  const [userRole, setUserRole] = useState<string>("unknown")
+
+  useEffect(() => {
+    // Get the user role from cookie for debugging purposes
+    const cookies = document.cookie.split(";")
+    const roleCookie = cookies.find((cookie) => cookie.trim().startsWith("ephrya-user-role="))
+    if (roleCookie) {
+      setUserRole(roleCookie.split("=")[1])
+    }
+  }, [])
+
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      // Fallback to client dashboard or home based on role
+      if (userRole === "client" || userRole === "new client") {
+        router.push("/client/dashboard")
+      } else {
+        router.push("/")
+      }
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0b1323] to-[#101d34] flex items-center justify-center p-6">
@@ -25,13 +49,14 @@ export default function UnauthorizedPage() {
             This page requires elevated privileges. Please contact your administrator if you believe this is an error.
           </p>
           <Button
-            onClick={() => router.back()}
+            onClick={handleGoBack}
             variant="outline"
             className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Go Back
           </Button>
+          <p className="text-xs text-gray-400 mt-4">Detected role: {userRole}</p>
         </CardContent>
       </Card>
     </div>

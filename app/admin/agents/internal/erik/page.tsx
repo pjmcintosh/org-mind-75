@@ -4,9 +4,9 @@ import { useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Shield, AlertTriangle, Users, Activity, MessageSquare, Scan, ArrowRight } from "lucide-react"
 import Link from "next/link"
+import AgentProfileHeader from "@/components/agents/shared/AgentProfileHeader"
 
 // Mock data for Erik's profile
 const agentOverview = {
@@ -151,30 +151,14 @@ export default function ErikAgentPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-950/30 to-slate-900 text-white px-6 py-10 max-w-screen-xl mx-auto">
       {/* Agent Profile Header */}
       <div className="mb-8">
-        <div className="flex items-start gap-6 mb-6">
-          <Avatar className="h-24 w-24 ring-4 ring-red-400/50 ring-offset-4 ring-offset-slate-900">
-            <AvatarImage src="/erik-avatar.png" alt="Erik" />
-            <AvatarFallback className="bg-red-500/20 text-red-400 text-2xl font-bold">
-              <Shield className="h-12 w-12" />
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text text-transparent mb-2">
-              Erik
-            </h1>
-            <p className="text-xl text-red-300 mb-4">Internal Security Agent</p>
-            <p className="text-slate-300 text-lg leading-relaxed max-w-3xl">
-              Monitors orchestration threats, oversees Security Dashboard, and coordinates with Ephrya, Lexi, and Legal
-              Agent for real-time system protection.
-            </p>
-            <div className="flex flex-wrap gap-2 mt-4">
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30 border">Active</Badge>
-              <Badge className="bg-red-500/20 text-red-400 border-red-500/30 border">Internal Security</Badge>
-              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 border">Threat Monitor</Badge>
-              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 border">New</Badge>
-            </div>
-          </div>
-        </div>
+        <AgentProfileHeader
+          name="Erik"
+          role="Internal Security Agent"
+          avatarSrc="/erik-avatar.png"
+          fallbackInitials="ER"
+          description="Monitors orchestration threats, oversees Security Dashboard, and coordinates with Ephrya, Lexi, and Legal Agent for real-time system protection."
+          statusBadges={["Active", "Internal Security", "Threat Monitor", "New"]}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6">

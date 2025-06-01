@@ -6,6 +6,7 @@ import { detectIntent, getIntentResponse, logVoiceInteraction, type TiloIntent }
 import { useTiloState } from "./useTiloState"
 import { speak, stopSpeaking, initializeVoices, testSpeech } from "@/lib/voice/speech"
 import { Button } from "@/components/ui/button"
+import { canUseTiloFeature } from "@/lib/auth/roles"
 
 // Web Speech API type declarations
 declare global {
@@ -25,6 +26,7 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceReady, setVoiceReady] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [userRole, setUserRole] = useState<string>("client") // Default to client for demo
 
   const { tiloState, setTiloState } = useTiloState()
 
@@ -42,6 +44,17 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
       // Stop any ongoing speech when component unmounts
       stopSpeaking()
     }
+  }, [])
+
+  // Add this useEffect to detect user role
+  useEffect(() => {
+    // In a real app, get this from context/session
+    const role =
+      document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("ephrya-user-role="))
+        ?.split("=")[1] || "client"
+    setUserRole(role)
   }, [])
 
   // Helper function to respond with both text and speech
@@ -83,6 +96,14 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
     // Set Tilo to alert state when processing
     setTiloState("alert")
 
+    // Check if client role and handle appropriately
+    if (userRole === "client" || userRole === "new client") {
+      const response = getIntentResponse(intent, transcript, userRole)
+      respondWithSpeech(response)
+      return
+    }
+
+    // Existing admin/staff handling...
     switch (intent.type) {
       case "approve_poc":
         submitPOCApproval("approved", transcript)
@@ -324,9 +345,12 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
           </Button>
         )}
 
-        <Button onClick={runSpeechTest} variant="outline" className="ml-auto">
-          Test Voice
-        </Button>
+        {/* Show advanced features only for admin/staff */}
+        {canUseTiloFeature(userRole as any, "advanced") && (
+          <Button onClick={runSpeechTest} variant="outline" className="ml-auto">
+            Test Voice
+          </Button>
+        )}
       </div>
 
       <div className="text-sm text-gray-600 flex items-center gap-2">
@@ -336,6 +360,13 @@ const TiloInterface: React.FC<TiloInterfaceProps> = ({ onTextChange }) => {
           Voice: {voiceReady ? "Ready" : "Initializing..."}
         </span>
       </div>
+
+      {/* Show client-friendly help text */}
+      {(userRole === "client" || userRole === "new client") && (
+        <div className="text-sm text-blue-600 bg-blue-50 p-2 rounded">
+          💡 Try asking: "What's my project status?" or "Can you help me?"
+        </div>
+      )}
     </div>
   )
 }

@@ -1,3 +1,5 @@
+import { handleClientIntent } from "@/lib/tilo/client-intent-handler"
+
 export interface TiloIntent {
   type: string
   confidence: number
@@ -76,7 +78,13 @@ function extractAgentName(transcript: string): string | null {
   return null
 }
 
-export function getIntentResponse(intent: TiloIntent, transcript: string): string {
+export function getIntentResponse(intent: TiloIntent, transcript: string, userRole?: string): string {
+  // Handle client-specific intents with restrictions
+  if (userRole === "client" || userRole === "new client") {
+    return handleClientIntent(intent, transcript, userRole)
+  }
+
+  // Existing admin/staff intent handling
   switch (intent.type) {
     case "approve_poc":
       return "Processing POC approval. I'll route this to the appropriate workflow."

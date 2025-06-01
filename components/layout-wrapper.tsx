@@ -38,11 +38,11 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
     )
   }
 
-  // Admin and Client pages with sidebar
+  // Admin and Client pages with sidebar - SINGLE LAYOUT ONLY
   if (isAdminPath || isClientPath) {
     return (
       <div className="flex min-h-screen bg-gradient-to-br from-[#0b1323] to-[#101d34]">
-        {/* Sidebar */}
+        {/* Sidebar - ONLY ONE INSTANCE */}
         <AdminSidebar />
 
         {/* Main content area */}
@@ -50,7 +50,7 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
           {/* Mobile header */}
           <AdminMobileHeader />
 
-          {/* Main content */}
+          {/* Main content - NO ADDITIONAL WRAPPER */}
           <main className="flex-1 overflow-auto p-6">{children}</main>
         </div>
       </div>
@@ -64,3 +64,5 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
     </div>
   )
 }
+
+export default LayoutWrapper

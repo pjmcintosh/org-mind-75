@@ -20,6 +20,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Special case: Allow clients to access Ask Tilo Desktop
+  if (pathname === "/admin/ask-tilo/desktop") {
+    console.log(`Middleware: Allowing ${normalizedRole} access to Ask Tilo Desktop`)
+    return NextResponse.next()
+  }
+
   // Admin routes - Allow admin and CEO
   if (pathname.startsWith("/admin")) {
     if (!["admin", "ceo", "developer", "analyst"].includes(normalizedRole)) {
@@ -35,6 +41,16 @@ export function middleware(request: NextRequest) {
       console.log(`Middleware: Blocking ${normalizedRole} from client routes`)
       return NextResponse.redirect(new URL("/unauthorized", request.url))
     }
+    return NextResponse.next()
+  }
+
+  // Tilo routes - Allow clients to access Tilo with restrictions
+  if (pathname.startsWith("/ask-tilo")) {
+    if (!["client", "new client", "admin", "ceo"].includes(normalizedRole)) {
+      console.log(`Middleware: Blocking ${normalizedRole} from Tilo routes`)
+      return NextResponse.redirect(new URL("/unauthorized", request.url))
+    }
+    console.log(`Middleware: Allowing ${normalizedRole} access to Tilo`)
     return NextResponse.next()
   }
 

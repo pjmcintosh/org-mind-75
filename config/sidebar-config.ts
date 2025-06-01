@@ -17,6 +17,7 @@ import {
   Brain,
   Eye,
   Link,
+  MessageSquare,
 } from "lucide-react"
 
 export interface SidebarItem {
@@ -384,30 +385,44 @@ export const sidebarConfig: Record<string, SidebarGroup> = {
   clientPanel: {
     title: "Client Portal",
     icon: Users,
-    isCollapsible: true,
-    defaultCollapsed: true,
-    roles: ["client"],
+    isCollapsible: false, // Make it always visible for clients
+    defaultCollapsed: false,
+    roles: ["client", "new client"],
     items: [
       {
-        label: "Submit Project",
+        label: "Dashboard",
+        path: "/client/dashboard",
+        icon: LayoutDashboard,
+        description: "View your project overview and status",
+        roles: ["client", "new client"],
+      },
+      {
+        label: "New Intake",
         path: "/client/intake",
         icon: FileText,
         description: "Submit new project for AI analysis",
-        roles: ["client"],
+        roles: ["client", "new client"],
       },
       {
         label: "Review Summary",
         path: "/client/review-summary",
         icon: Activity,
         description: "Review and approve project submissions",
-        roles: ["client"],
+        roles: ["client", "new client"],
+      },
+      {
+        label: "Chat with Ephrya",
+        path: "/client/ephrya",
+        icon: MessageSquare,
+        description: "Get assistance from Ephrya AI",
+        roles: ["client", "new client"],
       },
       {
         label: "Confirmation",
         path: "/client/confirmation",
         icon: Shield,
         description: "View submission confirmations",
-        roles: ["client"],
+        roles: ["client", "new client"],
       },
     ],
   },
