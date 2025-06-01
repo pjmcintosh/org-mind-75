@@ -1,13 +1,21 @@
 import type React from "react"
+import type { ReactNode } from "react"
+import AvatarImage from "./AvatarImage"
 
 interface AgentProfileHeaderProps {
   name: string
   role: string
   avatarSrc?: string
-  avatarComponent?: React.ReactNode
+  avatarComponent?: ReactNode
   fallbackInitials: string
   description: string
   statusBadges: string[]
+}
+
+interface AvatarImageProps {
+  src: string
+  alt: string
+  fallbackInitials: string
 }
 
 const AgentProfileHeader: React.FC<AgentProfileHeaderProps> = ({
@@ -27,22 +35,10 @@ const AgentProfileHeader: React.FC<AgentProfileHeaderProps> = ({
           {avatarComponent ? (
             avatarComponent
           ) : avatarSrc ? (
-            <img
+            <AvatarImage
               src={avatarSrc || "/placeholder.svg"}
               alt={`${name} avatar`}
-              className="w-full h-full object-cover object-center"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.style.display = "none"
-                const parent = target.parentElement
-                if (parent) {
-                  parent.innerHTML = `
-                    <div class="w-full h-full flex items-center justify-center bg-slate-700">
-                      <span class="text-slate-400 text-xl font-semibold">${fallbackInitials}</span>
-                    </div>
-                  `
-                }
-              }}
+              fallbackInitials={fallbackInitials}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-slate-700">
