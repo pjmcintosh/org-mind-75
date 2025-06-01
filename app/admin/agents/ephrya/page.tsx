@@ -27,7 +27,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import AgentProfileHeader from "@/components/agents/shared/AgentProfileHeader"
-import TiloAvatar from "@/components/tilo/TiloAvatar"
 
 export default function EphryaAgentPage() {
   const [autonomyLevel, setAutonomyLevel] = useState("Full Autonomy")
@@ -251,7 +250,7 @@ export default function EphryaAgentPage() {
           <AgentProfileHeader
             name="Tilo"
             role="Organizational Mind"
-            avatarComponent={<TiloAvatar state="idle" size="xl" />}
+            avatarSrc="/tilo-static-avatar.png"
             fallbackInitials="T"
             description="Central intelligence and coordination system orchestrating seamless collaboration across all organizational agents and workflows."
             statusBadges={["Online", "System Core"]}
